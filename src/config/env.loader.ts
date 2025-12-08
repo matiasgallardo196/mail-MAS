@@ -31,3 +31,6 @@ export const FULL_LOGS = process.env.FULL_LOGS === 'true';
 // Rate limit variables
 export const RATE_LIMIT_TTL = Number(process.env.RATE_LIMIT_TTL) || 60; // 60 seconds
 export const RATE_LIMIT_LIMIT = Number(process.env.RATE_LIMIT_LIMIT) || 100; // 100 requests
+
+// OpenAI variables
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
