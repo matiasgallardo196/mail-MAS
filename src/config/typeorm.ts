@@ -6,7 +6,7 @@ const config = {
   type: 'postgres',
   url: process.env.DATABASE_URL,
   autoLoadEntities: true,
-  entities: ['dist/**/*.entity{.ts,.js}'],
+  entities: ['dist/**/*.entity{.ts,.js}', 'src/**/*.entity{.ts,.js}'],
   migrations: ['dist/migrations/*{.ts,.js}'],
   synchronize: !IS_PRODUCTION,
   logging: IS_PRODUCTION,
