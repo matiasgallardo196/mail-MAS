@@ -74,7 +74,7 @@ The project loads variables according to the `NODE_ENV` value:
 
 Open `.env.development` and adjust the values according to your needs:
 
-```env
+````env
 # HTTP Server Port
 PORT=3000
 
@@ -99,7 +99,23 @@ FULL_LOGS=false
 # Rate limiting
 RATE_LIMIT_TTL=60          # Time window in seconds
 RATE_LIMIT_LIMIT=100       # Requests allowed per IP
-```
+### 🔐 OpenAI Agents (Optional)
+
+If you plan to use the OpenAI Agents SDK integration (MAS), add the following keys to your `.env.*` files and configure the default agent behavior as needed:
+
+```env
+# OpenAI API Key (required for Agents usage)
+OPENAI_API_KEY=sk-your-openai-api-key
+OPENAI_ORG_ID=org-your-openai-org-id
+# Agent defaults (optional)
+AGENT_MODEL=gpt-4-turbo-preview
+AGENT_TEMPERATURE=0.1
+AGENT_MAX_TOKENS=2000
+````
+
+Make sure to **never** check the `.env.*` files containing real secrets into version control. Use environment secrets management for CI and production.
+
+````
 
 **Note**: For local development, the default values from `env.development.example` are usually sufficient.
 
@@ -109,9 +125,10 @@ RATE_LIMIT_LIMIT=100       # Requests allowed per IP
 
 ```bash
 npm run start:dev
-```
+````
 
 This command:
+
 - Sets `NODE_ENV=development`
 - Starts the server in watch mode (automatic reload)
 - Compiles TypeScript on-the-fly
@@ -173,6 +190,7 @@ curl http://localhost:3000/health
 ```
 
 Expected response:
+
 ```json
 {
   "status": "ok",
@@ -184,6 +202,7 @@ Expected response:
 #### Swagger (development only)
 
 Open in your browser:
+
 ```
 http://localhost:3000/docs
 ```
@@ -198,20 +217,20 @@ You should see the Swagger interface with the API documentation.
 
 Here is the complete list of scripts in `package.json`:
 
-| Script | Description |
-|--------|-------------|
-| `start:dev` | Development with watch mode, `NODE_ENV=development` |
-| `start:prod:watch` | Production with watch mode, `NODE_ENV=production` |
-| `build` | Compiles TypeScript to JavaScript in `dist/` |
-| `start:prod` | Runs `node dist/main` (requires previous build) |
-| `start` | Starts without watch (not recommended, use `start:dev`) |
-| `start:debug` | Starts in debug mode with watch |
-| `test` | Runs unit tests |
-| `test:watch` | Runs tests in watch mode |
-| `test:cov` | Runs tests with coverage report |
-| `test:e2e` | Runs end-to-end tests |
-| `lint` | Runs ESLint and fixes errors automatically |
-| `format` | Formats code with Prettier |
+| Script             | Description                                             |
+| ------------------ | ------------------------------------------------------- |
+| `start:dev`        | Development with watch mode, `NODE_ENV=development`     |
+| `start:prod:watch` | Production with watch mode, `NODE_ENV=production`       |
+| `build`            | Compiles TypeScript to JavaScript in `dist/`            |
+| `start:prod`       | Runs `node dist/main` (requires previous build)         |
+| `start`            | Starts without watch (not recommended, use `start:dev`) |
+| `start:debug`      | Starts in debug mode with watch                         |
+| `test`             | Runs unit tests                                         |
+| `test:watch`       | Runs tests in watch mode                                |
+| `test:cov`         | Runs tests with coverage report                         |
+| `test:e2e`         | Runs end-to-end tests                                   |
+| `lint`             | Runs ESLint and fixes errors automatically              |
+| `format`           | Formats code with Prettier                              |
 
 ---
 
@@ -220,6 +239,7 @@ Here is the complete list of scripts in `package.json`:
 ### Server won't start
 
 **Port in use:**
+
 ```bash
 # Check which process is using port 3000
 # Windows:
@@ -232,10 +252,12 @@ lsof -i :3000
 Solution: Change the `PORT` in your `.env.development` or terminate the process using the port.
 
 **File .env not found:**
+
 - Verify that `.env.development` exists (or `.env.production` according to your `NODE_ENV`)
 - Make sure you created it from `env.development.example` or `env.production.example` as appropriate
 
 **Dependency errors:**
+
 ```bash
 # Clean and reinstall
 rm -rf node_modules package-lock.json

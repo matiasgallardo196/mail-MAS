@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { HealthModule } from './modules/health/health.module';
+import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { AppLoggerModule } from './common/logger/logger.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
@@ -17,6 +18,7 @@ import { RATE_LIMIT_TTL, RATE_LIMIT_LIMIT } from './config/env.loader';
     ]),
     AppLoggerModule,
     HealthModule,
+    SchedulingModule,
   ],
   controllers: [],
   providers: [
