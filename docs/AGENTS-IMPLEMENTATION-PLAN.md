@@ -70,7 +70,7 @@ Requerimientos mínimos para el MVP:
 - `roster.tools`, `fairwork.tools`, `store.tools`, `employee.tools` (mocks o reales)
 - `SchedulingOrchestrator` con fallback (roster → compliance → optimization)
 
-Flujo mínimo (secuencial determinista):
+## Flujo mínimo (secuencial determinista):
 
 1. Orchestrator recibe la solicitud y crea `requestId`.
 2. Planner / Orchestrator obtiene contexto con `store.tools` y `employee.tools`.
