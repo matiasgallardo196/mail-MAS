@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SchedulingPlanner } from './planner/scheduling.planner';
+import { OrchestrationPlanner } from './planner/orchestration.planner';
 import { RosterWorker } from './workers/roster.worker';
 import { ComplianceWorker } from './workers/compliance.worker';
 import { OptimizationWorker } from './workers/optimization.worker';
@@ -24,7 +24,7 @@ export class SchedulingOrchestrator {
       // Try to require the Orchestrator class from the SDK; if not present, fallback
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const OrchestratorClass = require('@openai/agents')?.Orchestrator;
-      const planner = new SchedulingPlanner();
+      const planner = new OrchestrationPlanner();
       const workers = [new RosterWorker(), new ComplianceWorker(), new OptimizationWorker()];
       if (OrchestratorClass) {
         this.orchestrator = new OrchestratorClass({ planner, workers, config: { maxSteps: 20, timeout: 60_000 } });

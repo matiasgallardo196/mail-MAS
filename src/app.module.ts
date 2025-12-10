@@ -12,9 +12,11 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { RATE_LIMIT_TTL, RATE_LIMIT_LIMIT } from './config/env.loader';
 import { DatabaseModule } from './db/database.module';
+import { OpenAIModule } from './modules/openai/openai.module';
 @Module({
   imports: [
     DatabaseModule,
+    OpenAIModule,
     ThrottlerModule.forRoot([
       {
         ttl: RATE_LIMIT_TTL,
@@ -48,4 +50,4 @@ import { DatabaseModule } from './db/database.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
