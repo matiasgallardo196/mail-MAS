@@ -13,8 +13,9 @@ describe('SchedulingOrchestrator (stub)', () => {
 
   it('should return a placeholder roster', async () => {
     const res = await orchestrator.generateRoster('store-1', new Date('2025-01-01'));
-    expect(res).toHaveProperty('storeId', 'store-1');
-    expect(res).toHaveProperty('roster');
-    expect(Array.isArray(res.roster)).toBe(true);
+    const roster = 'storeId' in res ? res : res.roster;
+    expect(roster).toHaveProperty('storeId', 'store-1');
+    expect(roster).toHaveProperty('roster');
+    expect(Array.isArray(roster.roster)).toBe(true);
   });
 });

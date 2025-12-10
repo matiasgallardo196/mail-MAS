@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsTimeZone } from 'class-validator';
+import { IsString, IsEnum, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { StoreLocationType } from '../../../common/enums/enums';
 
@@ -35,4 +35,3 @@ export class CreateStoreDto {
   @IsString()
   closingTime?: string;
 }
-

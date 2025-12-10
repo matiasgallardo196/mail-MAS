@@ -17,7 +17,7 @@ import { Employee } from '../employees/entities/employee.entity';
 import { Station } from '../stations/entities/station.entity';
 
 const logger = new Logger('SchedulingModule');
-let openAiImports = [] as any[];
+let openAiImports: any[] = [];
 try {
   // Require dynamically so module is optional in dev environments without the SDK
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -41,31 +41,10 @@ try {
     ...openAiImports,
     EmployeeModule,
     StoreModule,
-    TypeOrmModule.forFeature([
-      ShiftCode,
-      SchedulePeriod,
-      ShiftAssignment,
-      Store,
-      Employee,
-      Station,
-    ]),
+    TypeOrmModule.forFeature([ShiftCode, SchedulePeriod, ShiftAssignment, Store, Employee, Station]),
   ],
-  controllers: [
-    ShiftCodesController,
-    SchedulePeriodsController,
-    ShiftAssignmentsController,
-  ],
-  providers: [
-    SchedulingOrchestrator,
-    ShiftCodesService,
-    SchedulePeriodsService,
-    ShiftAssignmentsService,
-  ],
-  exports: [
-    SchedulingOrchestrator,
-    ShiftCodesService,
-    SchedulePeriodsService,
-    ShiftAssignmentsService,
-  ],
+  controllers: [ShiftCodesController, SchedulePeriodsController, ShiftAssignmentsController],
+  providers: [SchedulingOrchestrator, ShiftCodesService, SchedulePeriodsService, ShiftAssignmentsService],
+  exports: [SchedulingOrchestrator, ShiftCodesService, SchedulePeriodsService, ShiftAssignmentsService],
 })
 export class SchedulingModule {}

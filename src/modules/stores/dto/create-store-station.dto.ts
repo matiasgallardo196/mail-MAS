@@ -15,4 +15,3 @@ export class CreateStoreStationDto {
   @IsBoolean()
   isEnabled?: boolean;
 }
-

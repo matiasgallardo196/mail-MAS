@@ -21,4 +21,3 @@ export class StoreStaffRequirement extends BaseEntityCustom {
   @Column({ name: 'required_staff', type: 'int' })
   requiredStaff: number;
 }
-

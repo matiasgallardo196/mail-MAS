@@ -3,7 +3,7 @@ import { RosterWorker } from './roster.worker';
 describe('RosterWorker', () => {
   it('should have generate_initial_roster tool that returns a roster', async () => {
     const worker = new RosterWorker();
-    const tool = worker.tools?.find((t: any) => t.function?.name === 'generate_initial_roster');
+    const tool = worker.tools?.find((t) => t.function?.name === 'generate_initial_roster');
     expect(tool).toBeDefined();
 
     const args = {

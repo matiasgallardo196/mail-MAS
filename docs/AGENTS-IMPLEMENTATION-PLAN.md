@@ -96,10 +96,10 @@ Objetivo: Añadir Tools robustas y Workers especializados (Compliance, Optimizat
 
 Tareas:
 
-- [ ] Implementar `fairwork.tools.ts` con `check_rest_period` y `calculate_penalty_rates`. (1-1.5d)
+- [x] Implementar `fairwork.tools.ts` con `check_rest_period` y `calculate_penalty_rates`. (1-1.5d)
 - [ ] Implementar `employee.tools.ts` para obtener disponibilidad, skills y contratos. (1d)
 - [ ] Implementar `store.tools.ts` con forecast, opening-hours y peak times. (1d)
-- [ ] Implement `ComplianceWorker` con `validate_fair_work_compliance` que reciba roster y contracts; test coverage completo. (1d)
+- [x] Implement `ComplianceWorker` con `validate_fair_work_compliance` que reciba roster y contracts; test coverage completo. (1d)
 - [ ] Implement `OptimizationWorker` skeleton y herramientas para cost estimation y shift smoothing. (1d)
 
 Criterios de éxito:

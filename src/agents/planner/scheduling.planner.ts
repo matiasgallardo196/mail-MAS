@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { PlannerOptions } from '../../shared/types/agent';
+import type { ToolDef } from '../../shared/types/tool';
 
 const PlannerBase = (() => {
   try {
@@ -9,11 +11,11 @@ const PlannerBase = (() => {
     return class {
       name?: string;
       instructions?: string;
-      tools?: any[];
-      constructor(opts: any = {}) {
+      tools?: ToolDef[];
+      constructor(opts: PlannerOptions = { name: 'fallback' } as PlannerOptions) {
         this.name = opts.name;
         this.instructions = opts.instructions;
-        this.tools = opts.tools;
+        this.tools = opts.tools as ToolDef[];
       }
     };
   }

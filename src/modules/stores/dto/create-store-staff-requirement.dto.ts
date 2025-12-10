@@ -20,4 +20,3 @@ export class CreateStoreStaffRequirementDto {
   @Min(0)
   requiredStaff: number;
 }
-

@@ -1,3 +1,6 @@
+import type { WorkerOptions } from '../../shared/types/agent';
+import type { ToolDef } from '../../shared/types/tool';
+
 const WorkerBase = (() => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -6,18 +9,23 @@ const WorkerBase = (() => {
     return class {
       name?: string;
       instructions?: string;
-      tools?: any[];
-      constructor(opts: any = {}) {
+      tools?: ToolDef[];
+      constructor(opts: WorkerOptions = { name: 'fallback' } as WorkerOptions) {
         this.name = opts.name;
         this.instructions = opts.instructions;
-        this.tools = opts.tools;
+        this.tools = opts.tools as ToolDef[];
       }
     };
   }
 })();
 import { z } from 'zod';
-import { GenerateInitialRosterParams, generateInitialRoster } from '../tools/roster.tools';
+import {
+  GenerateInitialRosterParams,
+  GenerateInitialRosterParamsType,
+  generateInitialRoster,
+} from '../tools/roster.tools';
 import { RosterSchema } from '../../shared/schemas/roster.schema';
+import type { Roster } from '../../shared/types/roster';
 
 export class RosterWorker extends WorkerBase {
   constructor() {
@@ -44,7 +52,7 @@ export class RosterWorker extends WorkerBase {
             },
           },
         },
-      ],
+      ] as ToolDef<GenerateInitialRosterParamsType, Roster>[],
     });
   }
 }

@@ -18,4 +18,3 @@ export enum PeriodType {
   NORMAL = 'NORMAL',
   PEAK = 'PEAK',
 }
-
