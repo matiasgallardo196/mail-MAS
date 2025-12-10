@@ -10,6 +10,7 @@ import { Employee } from '../modules/employees/entities/employee.entity';
 import { EmployeeAvailability } from '../modules/employees/entities/employee-availability.entity';
 import { SchedulingPolicy } from '../modules/scheduling/entities/scheduling-policy.entity';
 import { EmploymentTypeHoursPolicy } from '../modules/scheduling/entities/employment-type-hours-policy.entity';
+import { PenaltyRule } from '../modules/scheduling/entities/penalty-rule.entity';
 import { stationsSeed } from './seeds/stations.seed';
 import { storesSeed } from './seeds/stores.seed';
 import { storeStationsSeed } from './seeds/store-stations.seed';
@@ -20,6 +21,7 @@ import { employeesSeed } from './seeds/employees.seed';
 import { employeeAvailabilitySeed } from './seeds/employee-availability.seed';
 import { schedulingPoliciesSeed } from './seeds/scheduling-policies.seed';
 import { employmentTypeHoursSeed } from './seeds/employment-type-hours.seed';
+import { penaltyRulesSeed } from './seeds/penalty-rules.seed';
 
 export class SeederService {
   private readonly logger = new Logger(SeederService.name);
@@ -34,6 +36,7 @@ export class SeederService {
       await this.seedStores();
       await this.seedSchedulingPolicies();
       await this.seedEmploymentTypeHoursPolicies();
+      await this.seedPenaltyRules();
       await this.seedShiftCodes();
       await this.seedStoreStations();
       await this.seedStoreStaffRequirements();
@@ -457,6 +460,40 @@ export class SeederService {
       });
       await ruleRepository.save(rule);
       this.logger.log(`  ✓ Regla creada: ${ruleData.policyName} - ${ruleData.employmentType}`);
+    }
+  }
+
+  private async seedPenaltyRules(): Promise<void> {
+    this.logger.log(`Sembrando ${penaltyRulesSeed.length} penalty rules...`);
+    const repo = this.dataSource.getRepository(PenaltyRule);
+
+    for (const rule of penaltyRulesSeed) {
+      // Check by unique combination of dayOfWeek, startTime, endTime, isPublicHoliday
+      const existing = await repo.findOne({
+        where: {
+          dayOfWeek: rule.dayOfWeek ?? undefined,
+          startTime: rule.startTime ?? undefined,
+          endTime: rule.endTime ?? undefined,
+          isPublicHoliday: rule.isPublicHoliday,
+        },
+      });
+
+      if (existing) {
+        this.logger.log(`  ⊙ Regla ya existe: ${rule.description ?? 'sin desc'}`);
+        continue;
+      }
+
+      const entity = repo.create({
+        dayOfWeek: rule.dayOfWeek,
+        startTime: rule.startTime,
+        endTime: rule.endTime,
+        employmentType: rule.employmentType,
+        multiplier: rule.multiplier,
+        isPublicHoliday: rule.isPublicHoliday,
+        description: rule.description,
+      });
+      await repo.save(entity);
+      this.logger.log(`  ✓ Regla creada: ${rule.description ?? 'sin desc'}`);
     }
   }
 }

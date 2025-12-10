@@ -6,6 +6,7 @@ export const ShiftSchema = z.object({
   end: z.string(),
   station: z.string().optional(),
   isPeak: z.boolean().default(false),
+  baseRate: z.number().optional(),
 });
 
 export type Shift = z.infer<typeof ShiftSchema>;
