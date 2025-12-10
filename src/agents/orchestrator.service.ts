@@ -60,7 +60,7 @@ export class SchedulingOrchestrator {
       if (complianceTool) {
         const complianceRes = await complianceTool.function.execute({ roster: rosterRes, employeeContracts: [] });
         // If critical -> return combined with status
-        if (complianceRes.issues.some((i) => i.severity === 'CRITICAL')) {
+        if (complianceRes.issues?.some((i: any) => i.severity === 'CRITICAL')) {
           return { status: 'requires_human_review', roster: rosterRes, compliance: complianceRes } as any;
         }
         // Continue: perform optimization
