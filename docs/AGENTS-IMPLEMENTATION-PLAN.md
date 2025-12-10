@@ -57,6 +57,81 @@ Entregables:
 
 ---
 
+## Plan rápido — Lanzamiento Mañana (MVP)
+
+Objetivo: Tener un flujo mínimo y seguro para generar un roster para una tienda en un entorno local o staging, con validación de cumplimiento y fallback.
+
+Requerimientos mínimos para el MVP:
+
+- `SchedulingPlanner` (skeleton)
+- `RosterWorker` (ya implementado, generate_initial_roster)
+- `ComplianceWorker` (validate_fair_work_compliance)
+- `OptimizationWorker` (skeleton - optimize_roster)
+- `roster.tools`, `fairwork.tools`, `store.tools`, `employee.tools` (mocks o reales)
+- `SchedulingOrchestrator` con fallback (roster → compliance → optimization)
+
+Flujo mínimo (secuencial determinista):
+
+1. Orchestrator recibe la solicitud y crea `requestId`.
+2. Planner / Orchestrator obtiene contexto con `store.tools` y `employee.tools`.
+3. Se genera un roster inicial con `RosterWorker.generate_initial_roster`.
+4. Se valida el roster con `ComplianceWorker.validate_fair_work_compliance` (Zod validation).
+
+- Si existe `severity === 'CRITICAL'` → detener el flujo y marcar para revisión humana.
+- Si no, continuar.
+
+5. Ejecutar `OptimizationWorker.optimize_roster` (mejora del roster, score) si está disponible.
+6. Guardar roster (persistir) y devolver resultado con `metrics`, `compliance` y `status`.
+
+Guardrails y reglas mínimas (para mañana):
+
+- Validación Zod para TODO input/output
+- Evitar `any` en la API pública: tipar `Worker` tools y `Orchestrator` run
+- `requestId` en logs y outputs
+- Timeout de orquestación y `maxSteps` limitado (ej.: 20-100) para evitar costes y latencia
+- Si `CRITICAL` compliance → stop & human review
+
+Commands y checks (quick launch):
+
+1. Clona el repositorio y configura `.env.development` con placeholders
+2. Instala dependencias:
+
+```bash
+npm install
+```
+
+3. Compila & Tests:
+
+```bash
+npm run build
+npm test
+```
+
+4. Arranca servidor en desarrollo:
+
+```bash
+PORT=3002 npm run start:dev
+```
+
+5. Validación rápida:
+
+- Ver `GET /health` (opcional) para comprobar servidor.
+- Ejecutar la suite de integración: `npm run test:e2e` (aún por crear) / o `npm test` ya valida la orquestación en tests.
+
+Checklist (día antes):
+
+- Verificar `.env` y eliminar secretos de repositorios.
+- Verificar `noImplicitAny` y `eslint` reglas (al menos en warnings) para detectar `any` críticos.
+- Confirmar fallback del Orchestrator activa si no se carga `@openai/agents`.
+- Confirmar `ComplianceWorker` y `fairwork.tools` cubren mínimos de Fair Work (descanso mínimo + penalties).
+- Notificar al equipo de operaciones y compliance para revisión si se encuentra `CRITICAL` durante pruebas.
+
+Notas finales:
+
+- Este plan está pensado para un lanzamiento controlado y rápido. No es el plan completo de producción; es un MVP operativo con seguridad por `CRITICAL` compliance y con opciones de rollback (revert to previous roster) si el optimization degrada cobertura.
+
+---
+
 ## Fase 1 — Prototipado de Orquestación y Planners (2-3 días)
 
 Objetivo: Implementar el Planner y Orchestrator básico que llame a un worker (RosterWorker) y devuelva un resultado.

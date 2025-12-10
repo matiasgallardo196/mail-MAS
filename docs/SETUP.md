@@ -211,6 +211,43 @@ You should see the Swagger interface with the API documentation.
 
 **Note**: Swagger is only available when `NODE_ENV=development`. In production it will not be available for security reasons.
 
+### Quick Launch (MVP — tomorrow)
+
+These steps are the minimal actions to get the project ready for a demo tomorrow (MVP): generate a roster, validate compliance and run optimization in the fallback mode.
+
+Steps to run locally:
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create `.env.development` from `.env.example` and set your environment variables. If you do not want to use the OpenAI Agent SDK, leave `OPENAI_API_KEY` and `OPENAI_ORG_ID` empty; the orchestrator will run in fallback mode.
+3. Run tests to verify everything works:
+
+```bash
+npm run build
+npm test
+```
+
+4. Start the app in development mode (optional port):
+
+```bash
+PORT=3002 npm run start:dev
+```
+
+Validation smoke test for the MVP:
+
+- Verify `GET /health` is healthy.
+- The integration test `src/agents/orchestrator.service.integration.spec.ts` runs the fallback flow (roster → compliance → optimization). You can run `npm test` to perform the integration.
+
+Troubleshooting and points to check before demo:
+
+- Ensure `.env` does not contain production secrets.
+- Verify that `ComplianceWorker` marks `CRITICAL` issues — this should block automatic roster acceptance.
+- Confirm that the fallback mode (no `@openai/agents`) starts successfully and that logs include 'OpenAI agents Orchestrator not initialized'.
+
 ---
 
 ## 🔧 Available Scripts
