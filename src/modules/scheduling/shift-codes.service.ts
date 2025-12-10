@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ShiftCode } from './entities/shift-code.entity';
@@ -23,9 +19,7 @@ export class ShiftCodesService {
     });
 
     if (existingShiftCode) {
-      throw new ConflictException(
-        `El código de turno "${createShiftCodeDto.code}" ya existe`,
-      );
+      throw new ConflictException(`El código de turno "${createShiftCodeDto.code}" ya existe`);
     }
 
     const shiftCode = this.shiftCodeRepository.create({
@@ -66,9 +60,7 @@ export class ShiftCodesService {
       });
 
       if (existingShiftCode) {
-        throw new ConflictException(
-          `El código de turno "${updateShiftCodeDto.code}" ya existe`,
-        );
+        throw new ConflictException(`El código de turno "${updateShiftCodeDto.code}" ya existe`);
       }
     }
 
@@ -82,4 +74,3 @@ export class ShiftCodesService {
     await this.shiftCodeRepository.save(shiftCode);
   }
 }
-

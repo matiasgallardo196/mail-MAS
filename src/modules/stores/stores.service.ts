@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Store } from './entities/store.entity';
@@ -23,9 +19,7 @@ export class StoresService {
     });
 
     if (existingStore) {
-      throw new ConflictException(
-        `La tienda con código "${createStoreDto.code}" ya existe`,
-      );
+      throw new ConflictException(`La tienda con código "${createStoreDto.code}" ya existe`);
     }
 
     const store = this.storeRepository.create(createStoreDto);
@@ -61,9 +55,7 @@ export class StoresService {
       });
 
       if (existingStore) {
-        throw new ConflictException(
-          `La tienda con código "${updateStoreDto.code}" ya existe`,
-        );
+        throw new ConflictException(`La tienda con código "${updateStoreDto.code}" ya existe`);
       }
     }
 
@@ -77,4 +69,3 @@ export class StoresService {
     await this.storeRepository.save(store);
   }
 }
-

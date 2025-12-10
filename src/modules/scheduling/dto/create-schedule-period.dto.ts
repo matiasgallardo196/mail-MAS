@@ -19,4 +19,3 @@ export class CreateSchedulePeriodDto {
   @IsDateString()
   endDate: string;
 }
-

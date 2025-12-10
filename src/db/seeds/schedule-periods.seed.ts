@@ -14,4 +14,3 @@ export const schedulePeriodsSeed = [
     endDate: '2024-12-22',
   },
 ];
-

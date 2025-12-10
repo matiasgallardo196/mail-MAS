@@ -12,19 +12,9 @@ import { StoreStaffRequirement } from './entities/store-staff-requirement.entity
 import { Station } from '../stations/entities/station.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Store, StoreStation, StoreStaffRequirement, Station]),
-  ],
-  controllers: [
-    StoresController,
-    StoreStationsController,
-    StoreStaffRequirementsController,
-  ],
-  providers: [
-    StoresService,
-    StoreStationsService,
-    StoreStaffRequirementsService,
-  ],
+  imports: [TypeOrmModule.forFeature([Store, StoreStation, StoreStaffRequirement, Station])],
+  controllers: [StoresController, StoreStationsController, StoreStaffRequirementsController],
+  providers: [StoresService, StoreStationsService, StoreStaffRequirementsService],
   exports: [StoresService, StoreStationsService, StoreStaffRequirementsService],
 })
 export class StoreModule {}

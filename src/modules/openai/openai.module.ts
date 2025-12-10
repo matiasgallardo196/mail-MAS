@@ -3,7 +3,7 @@ import { OpenAIService } from './openai.service';
 
 @Global()
 @Module({
-    providers: [OpenAIService],
-    exports: [OpenAIService],
+  providers: [OpenAIService],
+  exports: [OpenAIService],
 })
-export class OpenAIModule { }
+export class OpenAIModule {}

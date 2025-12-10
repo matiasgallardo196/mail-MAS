@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ShiftAssignmentsService } from './shift-assignments.service';
 import { CreateShiftAssignmentDto } from './dto/create-shift-assignment.dto';
@@ -18,9 +8,7 @@ import { ShiftAssignment } from './entities/shift-assignment.entity';
 @ApiTags('shift-assignments')
 @Controller('shift-assignments')
 export class ShiftAssignmentsController {
-  constructor(
-    private readonly shiftAssignmentsService: ShiftAssignmentsService,
-  ) {}
+  constructor(private readonly shiftAssignmentsService: ShiftAssignmentsService) {}
 
   @Post()
   @ApiOperation({ summary: 'Crear una nueva asignación de turno' })
@@ -51,10 +39,7 @@ export class ShiftAssignmentsController {
   @ApiResponse({ status: 200, description: 'Asignación actualizada exitosamente', type: ShiftAssignment })
   @ApiResponse({ status: 404, description: 'Asignación o relación no encontrada' })
   @ApiResponse({ status: 409, description: 'La nueva asignación ya existe' })
-  update(
-    @Param('id') id: string,
-    @Body() updateAssignmentDto: UpdateShiftAssignmentDto,
-  ): Promise<ShiftAssignment> {
+  update(@Param('id') id: string, @Body() updateAssignmentDto: UpdateShiftAssignmentDto): Promise<ShiftAssignment> {
     return this.shiftAssignmentsService.update(id, updateAssignmentDto);
   }
 
@@ -67,4 +52,3 @@ export class ShiftAssignmentsController {
     return this.shiftAssignmentsService.remove(id);
   }
 }
-

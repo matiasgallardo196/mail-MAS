@@ -15,19 +15,41 @@ import { ShiftAssignment } from './entities/shift-assignment.entity';
 import { Store } from '../stores/entities/store.entity';
 import { Employee } from '../employees/entities/employee.entity';
 import { Station } from '../stations/entities/station.entity';
+import { SchedulingPolicy } from './entities/scheduling-policy.entity';
+import { EmploymentTypeHoursPolicy } from './entities/employment-type-hours-policy.entity';
+import { SchedulingPolicyService } from './scheduling-policy.service';
 
 const logger = new Logger('SchedulingModule');
 
-
 @Module({
   imports: [
-
     EmployeeModule,
     StoreModule,
-    TypeOrmModule.forFeature([ShiftCode, SchedulePeriod, ShiftAssignment, Store, Employee, Station]),
+    TypeOrmModule.forFeature([
+      ShiftCode,
+      SchedulePeriod,
+      ShiftAssignment,
+      Store,
+      Employee,
+      Station,
+      SchedulingPolicy,
+      EmploymentTypeHoursPolicy,
+    ]),
   ],
   controllers: [ShiftCodesController, SchedulePeriodsController, ShiftAssignmentsController],
-  providers: [SchedulingOrchestrator, ShiftCodesService, SchedulePeriodsService, ShiftAssignmentsService],
-  exports: [SchedulingOrchestrator, ShiftCodesService, SchedulePeriodsService, ShiftAssignmentsService],
+  providers: [
+    SchedulingOrchestrator,
+    ShiftCodesService,
+    SchedulePeriodsService,
+    ShiftAssignmentsService,
+    SchedulingPolicyService,
+  ],
+  exports: [
+    SchedulingOrchestrator,
+    ShiftCodesService,
+    SchedulePeriodsService,
+    ShiftAssignmentsService,
+    SchedulingPolicyService,
+  ],
 })
-export class SchedulingModule { }
+export class SchedulingModule {}

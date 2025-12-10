@@ -1,10 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { BaseEntityCustom } from '../../../common/entities/base.entity';
 import { Store } from '../../stores/entities/store.entity';
 import { Station } from '../../stations/entities/station.entity';
@@ -40,13 +34,9 @@ export class Employee extends BaseEntityCustom {
   @JoinColumn({ name: 'default_station_id' })
   defaultStation?: Station;
 
-  @OneToMany(
-    () => EmployeeAvailability,
-    (availability) => availability.employee,
-  )
+  @OneToMany(() => EmployeeAvailability, (availability) => availability.employee)
   availabilities: EmployeeAvailability[];
 
   @OneToMany(() => ShiftAssignment, (assignment) => assignment.employee)
   assignments: ShiftAssignment[];
 }
-

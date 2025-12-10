@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { SchedulePeriodsService } from './schedule-periods.service';
 import { CreateSchedulePeriodDto } from './dto/create-schedule-period.dto';
@@ -18,18 +8,14 @@ import { SchedulePeriod } from './entities/schedule-period.entity';
 @ApiTags('schedule-periods')
 @Controller('schedule-periods')
 export class SchedulePeriodsController {
-  constructor(
-    private readonly schedulePeriodsService: SchedulePeriodsService,
-  ) {}
+  constructor(private readonly schedulePeriodsService: SchedulePeriodsService) {}
 
   @Post()
   @ApiOperation({ summary: 'Crear un nuevo período de programación' })
   @ApiResponse({ status: 201, description: 'Período creado exitosamente', type: SchedulePeriod })
   @ApiResponse({ status: 404, description: 'Tienda no encontrada' })
   @ApiResponse({ status: 400, description: 'La fecha de inicio debe ser anterior a la fecha de fin' })
-  create(
-    @Body() createSchedulePeriodDto: CreateSchedulePeriodDto,
-  ): Promise<SchedulePeriod> {
+  create(@Body() createSchedulePeriodDto: CreateSchedulePeriodDto): Promise<SchedulePeriod> {
     return this.schedulePeriodsService.create(createSchedulePeriodDto);
   }
 
@@ -53,10 +39,7 @@ export class SchedulePeriodsController {
   @ApiResponse({ status: 200, description: 'Período actualizado exitosamente', type: SchedulePeriod })
   @ApiResponse({ status: 404, description: 'Período o tienda no encontrada' })
   @ApiResponse({ status: 400, description: 'La fecha de inicio debe ser anterior a la fecha de fin' })
-  update(
-    @Param('id') id: string,
-    @Body() updateSchedulePeriodDto: UpdateSchedulePeriodDto,
-  ): Promise<SchedulePeriod> {
+  update(@Param('id') id: string, @Body() updateSchedulePeriodDto: UpdateSchedulePeriodDto): Promise<SchedulePeriod> {
     return this.schedulePeriodsService.update(id, updateSchedulePeriodDto);
   }
 
@@ -69,4 +52,3 @@ export class SchedulePeriodsController {
     return this.schedulePeriodsService.remove(id);
   }
 }
-

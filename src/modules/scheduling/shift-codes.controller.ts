@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ShiftCodesService } from './shift-codes.service';
 import { CreateShiftCodeDto } from './dto/create-shift-code.dto';
@@ -48,10 +38,7 @@ export class ShiftCodesController {
   @ApiResponse({ status: 200, description: 'Código de turno actualizado exitosamente', type: ShiftCode })
   @ApiResponse({ status: 404, description: 'Código de turno no encontrado' })
   @ApiResponse({ status: 409, description: 'El código de turno ya existe' })
-  update(
-    @Param('id') id: string,
-    @Body() updateShiftCodeDto: UpdateShiftCodeDto,
-  ): Promise<ShiftCode> {
+  update(@Param('id') id: string, @Body() updateShiftCodeDto: UpdateShiftCodeDto): Promise<ShiftCode> {
     return this.shiftCodesService.update(id, updateShiftCodeDto);
   }
 
@@ -64,4 +51,3 @@ export class ShiftCodesController {
     return this.shiftCodesService.remove(id);
   }
 }
-

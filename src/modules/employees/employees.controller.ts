@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { EmployeesService } from './employees.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -49,10 +39,7 @@ export class EmployeesController {
   @ApiResponse({ status: 200, description: 'Empleado actualizado exitosamente', type: Employee })
   @ApiResponse({ status: 404, description: 'Empleado, tienda o estación no encontrada' })
   @ApiResponse({ status: 409, description: 'El código externo del empleado ya existe' })
-  update(
-    @Param('id') id: string,
-    @Body() updateEmployeeDto: UpdateEmployeeDto,
-  ): Promise<Employee> {
+  update(@Param('id') id: string, @Body() updateEmployeeDto: UpdateEmployeeDto): Promise<Employee> {
     return this.employeesService.update(id, updateEmployeeDto);
   }
 
@@ -65,4 +52,3 @@ export class EmployeesController {
     return this.employeesService.remove(id);
   }
 }
-

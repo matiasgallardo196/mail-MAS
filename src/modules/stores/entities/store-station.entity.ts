@@ -17,4 +17,3 @@ export class StoreStation extends BaseEntityCustom {
   @Column({ name: 'is_enabled', type: 'boolean', default: true })
   isEnabled: boolean;
 }
-

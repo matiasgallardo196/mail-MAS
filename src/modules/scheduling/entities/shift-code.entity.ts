@@ -35,4 +35,3 @@ export class ShiftCode extends BaseEntityCustom {
   @OneToMany(() => ShiftAssignment, (sa) => sa.shiftCode)
   assignments: ShiftAssignment[];
 }
-

@@ -12,16 +12,7 @@ import { SchedulePeriod } from '../scheduling/entities/schedule-period.entity';
 import { ShiftCode } from '../scheduling/entities/shift-code.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      Employee,
-      EmployeeAvailability,
-      Store,
-      Station,
-      SchedulePeriod,
-      ShiftCode,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([Employee, EmployeeAvailability, Store, Station, SchedulePeriod, ShiftCode])],
   controllers: [EmployeesController, EmployeeAvailabilityController],
   providers: [EmployeesService, EmployeeAvailabilityService],
   exports: [EmployeesService, EmployeeAvailabilityService],

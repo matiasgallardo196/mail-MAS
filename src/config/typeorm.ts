@@ -1,13 +1,19 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { registerAs } from '@nestjs/config';
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { IS_PRODUCTION } from './env.loader';
 
-const config = {
+// When running with ts-node (e.g. seeding) we need to point to the TS sources.
+// In compiled mode (nest start --watch / prod) we must load the compiled JS
+// to avoid SyntaxError al intentar ejecutar archivos .ts sin transpilación.
+const isTsRuntime = __filename.endsWith('.ts');
+
+// Config base compatible con DataSource (CLI / migraciones).
+const baseConfig: DataSourceOptions = {
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  autoLoadEntities: true,
-  entities: ['dist/**/*.entity{.ts,.js}', 'src/**/*.entity{.ts,.js}'],
-  migrations: ['dist/migrations/*{.ts,.js}'],
+  entities: [isTsRuntime ? 'src/**/*.entity.ts' : 'dist/**/*.entity.js'],
+  migrations: [isTsRuntime ? 'src/migrations/**/*{.ts,.js}' : 'dist/migrations/**/*{.js}'],
   synchronize: !IS_PRODUCTION,
   logging: IS_PRODUCTION,
   //logger: 'advanced-console',
@@ -17,6 +23,12 @@ const config = {
   // uuidExtension: 'pgcrypto',
 };
 
-export default registerAs('typeorm', () => config);
+// TypeOrmModuleOptions incluye opciones extra de Nest (p. ej. autoLoadEntities).
+const config = {
+  ...baseConfig,
+  autoLoadEntities: true,
+} satisfies TypeOrmModuleOptions;
 
-export const connectionSource = new DataSource(config as DataSourceOptions); //migraciones desde cli
+export default registerAs<TypeOrmModuleOptions>('typeorm', () => config);
+
+export const connectionSource = new DataSource(baseConfig); // migraciones desde cli

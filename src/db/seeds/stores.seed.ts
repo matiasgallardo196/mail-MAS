@@ -20,4 +20,3 @@ export const storesSeed = [
     closingTime: '22:00',
   },
 ];
-

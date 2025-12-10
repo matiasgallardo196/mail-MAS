@@ -80,4 +80,3 @@ export const shiftCodesSeed = [
     isManagement: true,
   },
 ];
-

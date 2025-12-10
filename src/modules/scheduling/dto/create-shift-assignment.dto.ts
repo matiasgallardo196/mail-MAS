@@ -31,4 +31,3 @@ export class CreateShiftAssignmentDto {
   @IsString()
   createdBy?: string;
 }
-

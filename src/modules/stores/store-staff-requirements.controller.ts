@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { StoreStaffRequirementsService } from './store-staff-requirements.service';
 import { CreateStoreStaffRequirementDto } from './dto/create-store-staff-requirement.dto';
@@ -18,18 +8,14 @@ import { StoreStaffRequirement } from './entities/store-staff-requirement.entity
 @ApiTags('store-staff-requirements')
 @Controller('store-staff-requirements')
 export class StoreStaffRequirementsController {
-  constructor(
-    private readonly storeStaffRequirementsService: StoreStaffRequirementsService,
-  ) {}
+  constructor(private readonly storeStaffRequirementsService: StoreStaffRequirementsService) {}
 
   @Post()
   @ApiOperation({ summary: 'Crear un nuevo requisito de personal' })
   @ApiResponse({ status: 201, description: 'Requisito creado exitosamente', type: StoreStaffRequirement })
   @ApiResponse({ status: 404, description: 'Tienda o estación no encontrada' })
   @ApiResponse({ status: 409, description: 'El requisito ya existe para esta combinación' })
-  create(
-    @Body() createRequirementDto: CreateStoreStaffRequirementDto,
-  ): Promise<StoreStaffRequirement> {
+  create(@Body() createRequirementDto: CreateStoreStaffRequirementDto): Promise<StoreStaffRequirement> {
     return this.storeStaffRequirementsService.create(createRequirementDto);
   }
 
@@ -69,4 +55,3 @@ export class StoreStaffRequirementsController {
     return this.storeStaffRequirementsService.remove(id);
   }
 }
-

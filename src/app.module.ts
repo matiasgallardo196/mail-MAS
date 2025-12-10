@@ -50,4 +50,4 @@ import { OpenAIModule } from './modules/openai/openai.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

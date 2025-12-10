@@ -33,4 +33,3 @@ export class CreateEmployeeDto {
   @IsUUID()
   defaultStationId?: string;
 }
-

@@ -32,4 +32,3 @@ export class CreateEmployeeAvailabilityDto {
   @IsString()
   notes?: string;
 }
-

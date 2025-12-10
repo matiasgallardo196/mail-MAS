@@ -6,7 +6,6 @@ import type { Roster } from '../../shared/types/roster';
 
 const WorkerBase = (() => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     return require('@openai/agents').Worker;
   } catch (err) {
     return class {

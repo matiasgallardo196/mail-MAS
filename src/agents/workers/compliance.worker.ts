@@ -14,7 +14,6 @@ import type { Roster } from '../../shared/types/roster';
 
 const WorkerBase = (() => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     return require('@openai/agents').Worker;
   } catch (err) {
     return class {
@@ -42,12 +41,29 @@ export class ComplianceWorker extends WorkerBase {
           function: {
             name: 'validate_fair_work_compliance',
             description: 'Valida un roster contra Fair Work Act',
-            parameters: z.object({ roster: z.any(), employeeContracts: z.array(z.any()).optional() }),
+            parameters: z.object({
+              roster: z.any(),
+              employeeContracts: z.array(z.any()).optional(),
+              schedulingPolicy: z
+                .object({
+                  minHoursBetweenShifts: z.number().optional(),
+                })
+                .optional(),
+            }),
             execute: async (args) => {
-              const schema = z.object({ roster: z.any(), employeeContracts: z.array(z.any()).optional() });
+              const schema = z.object({
+                roster: z.any(),
+                employeeContracts: z.array(z.any()).optional(),
+                schedulingPolicy: z
+                  .object({
+                    minHoursBetweenShifts: z.number().optional(),
+                  })
+                  .optional(),
+              });
               const parsed = schema.parse(args);
               const roster = parsed.roster as Roster;
               const employeeContracts: any[] = parsed.employeeContracts ?? [];
+              const schedulingPolicy = parsed.schedulingPolicy;
               // Validate rest-periods per employee
               const issues = [] as ComplianceResult['issues'];
               // Build per employee shift lists
@@ -67,7 +83,7 @@ export class ComplianceWorker extends WorkerBase {
                     employeeId,
                     previousShiftEnd: s1.end,
                     nextShiftStart: s2.start,
-                    minHours: 10,
+                    minHours: schedulingPolicy?.minHoursBetweenShifts ?? 10,
                   });
                   if (!restResult.compliant) {
                     issues.push({
@@ -85,8 +101,7 @@ export class ComplianceWorker extends WorkerBase {
                     shiftDate: s.start.split('T')[0],
                     startTime: s.start.split('T')[1].split('.')[0],
                     endTime: s.end.split('T')[1].split('.')[0],
-                    employeeType:
-                      (employeeContracts.find((c) => c.employeeId === employeeId)?.contractType as any) ?? 'casual',
+                    employeeType: employeeContracts.find((c) => c.employeeId === employeeId)?.contractType ?? 'casual',
                     baseRate: s.baseRate ?? 25,
                     isPublicHoliday: false,
                   });

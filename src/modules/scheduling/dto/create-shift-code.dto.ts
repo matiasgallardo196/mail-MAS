@@ -41,4 +41,3 @@ export class CreateShiftCodeDto {
   @IsBoolean()
   isManagement?: boolean;
 }
-

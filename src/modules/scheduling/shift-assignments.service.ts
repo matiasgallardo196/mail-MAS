@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ShiftAssignment } from './entities/shift-assignment.entity';
@@ -31,9 +27,7 @@ export class ShiftAssignmentsService {
     private readonly stationRepository: Repository<Station>,
   ) {}
 
-  async create(
-    createAssignmentDto: CreateShiftAssignmentDto,
-  ): Promise<ShiftAssignment> {
+  async create(createAssignmentDto: CreateShiftAssignmentDto): Promise<ShiftAssignment> {
     // Verificar todas las relaciones
     const employee = await this.employeeRepository.findOne({
       where: { id: createAssignmentDto.employeeId, isActive: true },
@@ -81,9 +75,7 @@ export class ShiftAssignmentsService {
     });
 
     if (existingAssignment) {
-      throw new ConflictException(
-        'Ya existe una asignación para este empleado, fecha, código de turno y estación',
-      );
+      throw new ConflictException('Ya existe una asignación para este empleado, fecha, código de turno y estación');
     }
 
     const assignment = this.assignmentRepository.create({
@@ -120,10 +112,7 @@ export class ShiftAssignmentsService {
     return assignment;
   }
 
-  async update(
-    id: string,
-    updateAssignmentDto: UpdateShiftAssignmentDto,
-  ): Promise<ShiftAssignment> {
+  async update(id: string, updateAssignmentDto: UpdateShiftAssignmentDto): Promise<ShiftAssignment> {
     const assignment = await this.findOne(id);
 
     // Verificar relaciones si se actualizan
@@ -184,9 +173,7 @@ export class ShiftAssignmentsService {
       });
 
       if (existingAssignment && existingAssignment.id !== id) {
-        throw new ConflictException(
-          'Ya existe una asignación para esta combinación',
-        );
+        throw new ConflictException('Ya existe una asignación para esta combinación');
       }
     }
 
@@ -222,4 +209,3 @@ export class ShiftAssignmentsService {
     await this.assignmentRepository.save(assignment);
   }
 }
-

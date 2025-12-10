@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Station } from './entities/station.entity';
@@ -23,9 +19,7 @@ export class StationsService {
     });
 
     if (existingStation) {
-      throw new ConflictException(
-        `La estación con código "${createStationDto.code}" ya existe`,
-      );
+      throw new ConflictException(`La estación con código "${createStationDto.code}" ya existe`);
     }
 
     const station = this.stationRepository.create(createStationDto);
@@ -61,9 +55,7 @@ export class StationsService {
       });
 
       if (existingStation) {
-        throw new ConflictException(
-          `La estación con código "${updateStationDto.code}" ya existe`,
-        );
+        throw new ConflictException(`La estación con código "${updateStationDto.code}" ya existe`);
       }
     }
 
@@ -77,4 +69,3 @@ export class StationsService {
     await this.stationRepository.save(station);
   }
 }
-

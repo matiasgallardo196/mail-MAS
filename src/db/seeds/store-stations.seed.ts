@@ -10,4 +10,3 @@ export const storeStationsSeed = [
   { storeCode: 'Store_2', stationCode: 'KITCHEN', isEnabled: true },
   { storeCode: 'Store_2', stationCode: 'COUNTER', isEnabled: true },
 ];
-

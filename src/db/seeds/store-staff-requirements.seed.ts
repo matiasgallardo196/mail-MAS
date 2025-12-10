@@ -23,4 +23,3 @@ export const staffRequirementsSeed = [
   { storeCode: 'Store_2', periodType: PeriodType.PEAK, stationCode: 'KITCHEN', requiredStaff: 4 },
   { storeCode: 'Store_2', periodType: PeriodType.PEAK, stationCode: 'COUNTER', requiredStaff: 3 },
 ];
-

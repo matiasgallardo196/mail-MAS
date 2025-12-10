@@ -1,10 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  Unique,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, Unique } from 'typeorm';
 import { BaseEntityCustom } from '../../../common/entities/base.entity';
 import { Employee } from './employee.entity';
 import { SchedulePeriod } from '../../scheduling/entities/schedule-period.entity';
@@ -21,10 +15,7 @@ export class EmployeeAvailability extends BaseEntityCustom {
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
 
-  @ManyToOne(
-    () => SchedulePeriod,
-    (schedulePeriod) => schedulePeriod.availabilities,
-  )
+  @ManyToOne(() => SchedulePeriod, (schedulePeriod) => schedulePeriod.availabilities)
   @JoinColumn({ name: 'schedule_period_id' })
   schedulePeriod: SchedulePeriod;
 
@@ -52,4 +43,3 @@ export class EmployeeAvailability extends BaseEntityCustom {
   @Column({ type: 'text', nullable: true })
   notes?: string;
 }
-

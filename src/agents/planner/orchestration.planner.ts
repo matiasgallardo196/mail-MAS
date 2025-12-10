@@ -3,7 +3,6 @@ import type { ToolDef } from '../../shared/types/tool';
 
 const PlannerBase = (() => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     return require('@openai/agents').Planner;
   } catch (err) {
     return class {

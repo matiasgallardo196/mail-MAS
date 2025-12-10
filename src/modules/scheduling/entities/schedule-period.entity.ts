@@ -19,13 +19,9 @@ export class SchedulePeriod extends BaseEntityCustom {
   @Column({ type: 'date', name: 'end_date' })
   endDate: Date;
 
-  @OneToMany(
-    () => EmployeeAvailability,
-    (availability) => availability.schedulePeriod,
-  )
+  @OneToMany(() => EmployeeAvailability, (availability) => availability.schedulePeriod)
   availabilities: EmployeeAvailability[];
 
   @OneToMany(() => ShiftAssignment, (assignment) => assignment.schedulePeriod)
   assignments: ShiftAssignment[];
 }
-

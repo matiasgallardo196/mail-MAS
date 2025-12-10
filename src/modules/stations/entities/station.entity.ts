@@ -32,4 +32,3 @@ export class Station extends BaseEntityCustom {
   @OneToMany(() => ShiftAssignment, (sa) => sa.station)
   assignments: ShiftAssignment[];
 }
-

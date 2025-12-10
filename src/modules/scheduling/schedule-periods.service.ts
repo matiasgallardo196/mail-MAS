@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SchedulePeriod } from './entities/schedule-period.entity';
@@ -19,18 +15,14 @@ export class SchedulePeriodsService {
     private readonly storeRepository: Repository<Store>,
   ) {}
 
-  async create(
-    createSchedulePeriodDto: CreateSchedulePeriodDto,
-  ): Promise<SchedulePeriod> {
+  async create(createSchedulePeriodDto: CreateSchedulePeriodDto): Promise<SchedulePeriod> {
     // Verificar que la tienda existe
     const store = await this.storeRepository.findOne({
       where: { id: createSchedulePeriodDto.storeId, isActive: true },
     });
 
     if (!store) {
-      throw new NotFoundException(
-        `Tienda con ID "${createSchedulePeriodDto.storeId}" no encontrada`,
-      );
+      throw new NotFoundException(`Tienda con ID "${createSchedulePeriodDto.storeId}" no encontrada`);
     }
 
     const startDate = new Date(createSchedulePeriodDto.startDate);
@@ -38,9 +30,7 @@ export class SchedulePeriodsService {
 
     // Verificar que la fecha de inicio sea anterior a la fecha de fin
     if (startDate >= endDate) {
-      throw new BadRequestException(
-        'La fecha de inicio debe ser anterior a la fecha de fin',
-      );
+      throw new BadRequestException('La fecha de inicio debe ser anterior a la fecha de fin');
     }
 
     const schedulePeriod = this.schedulePeriodRepository.create({
@@ -68,18 +58,13 @@ export class SchedulePeriodsService {
     });
 
     if (!schedulePeriod) {
-      throw new NotFoundException(
-        `Período de programación con ID "${id}" no encontrado`,
-      );
+      throw new NotFoundException(`Período de programación con ID "${id}" no encontrado`);
     }
 
     return schedulePeriod;
   }
 
-  async update(
-    id: string,
-    updateSchedulePeriodDto: UpdateSchedulePeriodDto,
-  ): Promise<SchedulePeriod> {
+  async update(id: string, updateSchedulePeriodDto: UpdateSchedulePeriodDto): Promise<SchedulePeriod> {
     const schedulePeriod = await this.findOne(id);
 
     // Verificar tienda si se actualiza
@@ -89,9 +74,7 @@ export class SchedulePeriodsService {
       });
 
       if (!store) {
-        throw new NotFoundException(
-          `Tienda con ID "${updateSchedulePeriodDto.storeId}" no encontrada`,
-        );
+        throw new NotFoundException(`Tienda con ID "${updateSchedulePeriodDto.storeId}" no encontrada`);
       }
     }
 
@@ -104,9 +87,7 @@ export class SchedulePeriodsService {
       : schedulePeriod.endDate;
 
     if (startDate >= endDate) {
-      throw new BadRequestException(
-        'La fecha de inicio debe ser anterior a la fecha de fin',
-      );
+      throw new BadRequestException('La fecha de inicio debe ser anterior a la fecha de fin');
     }
 
     if (updateSchedulePeriodDto.storeId) {
@@ -134,4 +115,3 @@ export class SchedulePeriodsService {
     await this.schedulePeriodRepository.save(schedulePeriod);
   }
 }
-

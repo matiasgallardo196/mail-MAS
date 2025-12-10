@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Employee } from './entities/employee.entity';
@@ -29,9 +25,7 @@ export class EmployeesService {
     });
 
     if (existingEmployee) {
-      throw new ConflictException(
-        `El empleado con código externo "${createEmployeeDto.externalCode}" ya existe`,
-      );
+      throw new ConflictException(`El empleado con código externo "${createEmployeeDto.externalCode}" ya existe`);
     }
 
     // Verificar que la tienda existe
@@ -40,9 +34,7 @@ export class EmployeesService {
     });
 
     if (!store) {
-      throw new NotFoundException(
-        `Tienda con ID "${createEmployeeDto.defaultStoreId}" no encontrada`,
-      );
+      throw new NotFoundException(`Tienda con ID "${createEmployeeDto.defaultStoreId}" no encontrada`);
     }
 
     // Verificar que la estación existe si se proporciona
@@ -52,9 +44,7 @@ export class EmployeesService {
       });
 
       if (!station) {
-        throw new NotFoundException(
-          `Estación con ID "${createEmployeeDto.defaultStationId}" no encontrada`,
-        );
+        throw new NotFoundException(`Estación con ID "${createEmployeeDto.defaultStationId}" no encontrada`);
       }
     }
 
@@ -104,9 +94,7 @@ export class EmployeesService {
       });
 
       if (existingEmployee) {
-        throw new ConflictException(
-          `El empleado con código externo "${updateEmployeeDto.externalCode}" ya existe`,
-        );
+        throw new ConflictException(`El empleado con código externo "${updateEmployeeDto.externalCode}" ya existe`);
       }
     }
 
@@ -117,9 +105,7 @@ export class EmployeesService {
       });
 
       if (!store) {
-        throw new NotFoundException(
-          `Tienda con ID "${updateEmployeeDto.defaultStoreId}" no encontrada`,
-        );
+        throw new NotFoundException(`Tienda con ID "${updateEmployeeDto.defaultStoreId}" no encontrada`);
       }
     }
 
@@ -131,9 +117,7 @@ export class EmployeesService {
         });
 
         if (!station) {
-          throw new NotFoundException(
-            `Estación con ID "${updateEmployeeDto.defaultStationId}" no encontrada`,
-          );
+          throw new NotFoundException(`Estación con ID "${updateEmployeeDto.defaultStationId}" no encontrada`);
         }
       }
     }
@@ -177,4 +161,3 @@ export class EmployeesService {
     await this.employeeRepository.save(employee);
   }
 }
-

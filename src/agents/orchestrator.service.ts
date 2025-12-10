@@ -22,7 +22,7 @@ export class SchedulingOrchestrator {
     this.logger.log('SchedulingOrchestrator initialized');
     try {
       // Try to require the Orchestrator class from the SDK; if not present, fallback
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+
       const OrchestratorClass = require('@openai/agents')?.Orchestrator;
       const planner = new OrchestrationPlanner();
       const workers = [new RosterWorker(), new ComplianceWorker(), new OptimizationWorker()];
@@ -82,6 +82,6 @@ export class SchedulingOrchestrator {
       task: `Generar roster para store ${storeId} starting ${weekStart.toISOString()}`,
       context: { storeId, weekStart: weekStart.toISOString() },
     });
-    return result as Roster;
+    return result;
   }
 }

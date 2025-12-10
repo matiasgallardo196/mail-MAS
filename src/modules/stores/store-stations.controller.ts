@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { StoreStationsService } from './store-stations.service';
 import { CreateStoreStationDto } from './dto/create-store-station.dto';
@@ -49,10 +39,7 @@ export class StoreStationsController {
   @ApiResponse({ status: 200, description: 'Relación actualizada exitosamente', type: StoreStation })
   @ApiResponse({ status: 404, description: 'Relación, tienda o estación no encontrada' })
   @ApiResponse({ status: 409, description: 'La nueva relación ya existe' })
-  update(
-    @Param('id') id: string,
-    @Body() updateStoreStationDto: UpdateStoreStationDto,
-  ): Promise<StoreStation> {
+  update(@Param('id') id: string, @Body() updateStoreStationDto: UpdateStoreStationDto): Promise<StoreStation> {
     return this.storeStationsService.update(id, updateStoreStationDto);
   }
 
@@ -65,4 +52,3 @@ export class StoreStationsController {
     return this.storeStationsService.remove(id);
   }
 }
-

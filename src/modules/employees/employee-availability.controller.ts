@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { EmployeeAvailabilityService } from './employee-availability.service';
 import { CreateEmployeeAvailabilityDto } from './dto/create-employee-availability.dto';
@@ -18,18 +8,14 @@ import { EmployeeAvailability } from './entities/employee-availability.entity';
 @ApiTags('employee-availability')
 @Controller('employee-availability')
 export class EmployeeAvailabilityController {
-  constructor(
-    private readonly employeeAvailabilityService: EmployeeAvailabilityService,
-  ) {}
+  constructor(private readonly employeeAvailabilityService: EmployeeAvailabilityService) {}
 
   @Post()
   @ApiOperation({ summary: 'Crear una nueva disponibilidad de empleado' })
   @ApiResponse({ status: 201, description: 'Disponibilidad creada exitosamente', type: EmployeeAvailability })
   @ApiResponse({ status: 404, description: 'Empleado, período, tienda, código de turno o estación no encontrado' })
   @ApiResponse({ status: 409, description: 'Ya existe una disponibilidad para este empleado, período y fecha' })
-  create(
-    @Body() createAvailabilityDto: CreateEmployeeAvailabilityDto,
-  ): Promise<EmployeeAvailability> {
+  create(@Body() createAvailabilityDto: CreateEmployeeAvailabilityDto): Promise<EmployeeAvailability> {
     return this.employeeAvailabilityService.create(createAvailabilityDto);
   }
 
@@ -69,4 +55,3 @@ export class EmployeeAvailabilityController {
     return this.employeeAvailabilityService.remove(id);
   }
 }
-

@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StoreStation } from './entities/store-station.entity';
@@ -30,9 +25,7 @@ export class StoreStationsService {
     });
 
     if (!store) {
-      throw new NotFoundException(
-        `Tienda con ID "${createStoreStationDto.storeId}" no encontrada`,
-      );
+      throw new NotFoundException(`Tienda con ID "${createStoreStationDto.storeId}" no encontrada`);
     }
 
     // Verificar que la estación existe
@@ -41,9 +34,7 @@ export class StoreStationsService {
     });
 
     if (!station) {
-      throw new NotFoundException(
-        `Estación con ID "${createStoreStationDto.stationId}" no encontrada`,
-      );
+      throw new NotFoundException(`Estación con ID "${createStoreStationDto.stationId}" no encontrada`);
     }
 
     // Verificar si la relación ya existe
@@ -55,9 +46,7 @@ export class StoreStationsService {
     });
 
     if (existingRelation) {
-      throw new ConflictException(
-        'La relación entre esta tienda y estación ya existe',
-      );
+      throw new ConflictException('La relación entre esta tienda y estación ya existe');
     }
 
     const storeStation = this.storeStationRepository.create({
@@ -83,18 +72,13 @@ export class StoreStationsService {
     });
 
     if (!storeStation) {
-      throw new NotFoundException(
-        `Relación Store-Station con ID "${id}" no encontrada`,
-      );
+      throw new NotFoundException(`Relación Store-Station con ID "${id}" no encontrada`);
     }
 
     return storeStation;
   }
 
-  async update(
-    id: string,
-    updateStoreStationDto: UpdateStoreStationDto,
-  ): Promise<StoreStation> {
+  async update(id: string, updateStoreStationDto: UpdateStoreStationDto): Promise<StoreStation> {
     const storeStation = await this.findOne(id);
 
     // Si se está actualizando la tienda, verificar que existe
@@ -104,9 +88,7 @@ export class StoreStationsService {
       });
 
       if (!store) {
-        throw new NotFoundException(
-          `Tienda con ID "${updateStoreStationDto.storeId}" no encontrada`,
-        );
+        throw new NotFoundException(`Tienda con ID "${updateStoreStationDto.storeId}" no encontrada`);
       }
     }
 
@@ -117,9 +99,7 @@ export class StoreStationsService {
       });
 
       if (!station) {
-        throw new NotFoundException(
-          `Estación con ID "${updateStoreStationDto.stationId}" no encontrada`,
-        );
+        throw new NotFoundException(`Estación con ID "${updateStoreStationDto.stationId}" no encontrada`);
       }
     }
 
@@ -133,9 +113,7 @@ export class StoreStationsService {
       });
 
       if (existingRelation && existingRelation.id !== id) {
-        throw new ConflictException(
-          'La relación entre esta tienda y estación ya existe',
-        );
+        throw new ConflictException('La relación entre esta tienda y estación ya existe');
       }
     }
 
@@ -160,4 +138,3 @@ export class StoreStationsService {
     await this.storeStationRepository.save(storeStation);
   }
 }
-

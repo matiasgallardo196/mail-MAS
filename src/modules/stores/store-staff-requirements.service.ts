@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StoreStaffRequirement } from './entities/store-staff-requirement.entity';
@@ -22,18 +18,14 @@ export class StoreStaffRequirementsService {
     private readonly stationRepository: Repository<Station>,
   ) {}
 
-  async create(
-    createRequirementDto: CreateStoreStaffRequirementDto,
-  ): Promise<StoreStaffRequirement> {
+  async create(createRequirementDto: CreateStoreStaffRequirementDto): Promise<StoreStaffRequirement> {
     // Verificar que la tienda existe
     const store = await this.storeRepository.findOne({
       where: { id: createRequirementDto.storeId, isActive: true },
     });
 
     if (!store) {
-      throw new NotFoundException(
-        `Tienda con ID "${createRequirementDto.storeId}" no encontrada`,
-      );
+      throw new NotFoundException(`Tienda con ID "${createRequirementDto.storeId}" no encontrada`);
     }
 
     // Verificar que la estación existe
@@ -42,9 +34,7 @@ export class StoreStaffRequirementsService {
     });
 
     if (!station) {
-      throw new NotFoundException(
-        `Estación con ID "${createRequirementDto.stationId}" no encontrada`,
-      );
+      throw new NotFoundException(`Estación con ID "${createRequirementDto.stationId}" no encontrada`);
     }
 
     // Verificar si la combinación ya existe
@@ -86,18 +76,13 @@ export class StoreStaffRequirementsService {
     });
 
     if (!requirement) {
-      throw new NotFoundException(
-        `Requisito de personal con ID "${id}" no encontrado`,
-      );
+      throw new NotFoundException(`Requisito de personal con ID "${id}" no encontrado`);
     }
 
     return requirement;
   }
 
-  async update(
-    id: string,
-    updateRequirementDto: UpdateStoreStaffRequirementDto,
-  ): Promise<StoreStaffRequirement> {
+  async update(id: string, updateRequirementDto: UpdateStoreStaffRequirementDto): Promise<StoreStaffRequirement> {
     const requirement = await this.findOne(id);
 
     // Verificar tienda si se actualiza
@@ -107,9 +92,7 @@ export class StoreStaffRequirementsService {
       });
 
       if (!store) {
-        throw new NotFoundException(
-          `Tienda con ID "${updateRequirementDto.storeId}" no encontrada`,
-        );
+        throw new NotFoundException(`Tienda con ID "${updateRequirementDto.storeId}" no encontrada`);
       }
     }
 
@@ -120,18 +103,12 @@ export class StoreStaffRequirementsService {
       });
 
       if (!station) {
-        throw new NotFoundException(
-          `Estación con ID "${updateRequirementDto.stationId}" no encontrada`,
-        );
+        throw new NotFoundException(`Estación con ID "${updateRequirementDto.stationId}" no encontrada`);
       }
     }
 
     // Verificar unicidad si se actualizan los campos únicos
-    if (
-      updateRequirementDto.storeId ||
-      updateRequirementDto.periodType ||
-      updateRequirementDto.stationId
-    ) {
+    if (updateRequirementDto.storeId || updateRequirementDto.periodType || updateRequirementDto.stationId) {
       const storeId = updateRequirementDto.storeId || requirement.store.id;
       const periodType = updateRequirementDto.periodType || requirement.periodType;
       const stationId = updateRequirementDto.stationId || requirement.station.id;
@@ -176,4 +153,3 @@ export class StoreStaffRequirementsService {
     await this.requirementRepository.save(requirement);
   }
 }
-

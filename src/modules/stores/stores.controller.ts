@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { StoresService } from './stores.service';
 import { CreateStoreDto } from './dto/create-store.dto';
@@ -48,10 +38,7 @@ export class StoresController {
   @ApiResponse({ status: 200, description: 'Tienda actualizada exitosamente', type: Store })
   @ApiResponse({ status: 404, description: 'Tienda no encontrada' })
   @ApiResponse({ status: 409, description: 'El código de tienda ya existe' })
-  update(
-    @Param('id') id: string,
-    @Body() updateStoreDto: UpdateStoreDto,
-  ): Promise<Store> {
+  update(@Param('id') id: string, @Body() updateStoreDto: UpdateStoreDto): Promise<Store> {
     return this.storesService.update(id, updateStoreDto);
   }
 
@@ -64,4 +51,3 @@ export class StoresController {
     return this.storesService.remove(id);
   }
 }
-

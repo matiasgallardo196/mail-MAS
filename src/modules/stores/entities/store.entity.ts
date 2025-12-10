@@ -7,6 +7,7 @@ import { Employee } from '../../employees/entities/employee.entity';
 import { SchedulePeriod } from '../../scheduling/entities/schedule-period.entity';
 import { EmployeeAvailability } from '../../employees/entities/employee-availability.entity';
 import { ShiftAssignment } from '../../scheduling/entities/shift-assignment.entity';
+import { SchedulingPolicy } from '../../scheduling/entities/scheduling-policy.entity';
 
 @Entity('stores')
 export class Store extends BaseEntityCustom {
@@ -48,5 +49,7 @@ export class Store extends BaseEntityCustom {
 
   @OneToMany(() => ShiftAssignment, (sa) => sa.store)
   assignments: ShiftAssignment[];
-}
 
+  @OneToMany(() => SchedulingPolicy, (policy) => policy.store)
+  schedulingPolicies: SchedulingPolicy[];
+}

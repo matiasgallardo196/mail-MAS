@@ -432,4 +432,3 @@ export const employeeAvailabilitySeed = [
   { externalCode: 1040, date: '2024-12-21', shiftCode: '2F' },
   { externalCode: 1040, date: '2024-12-22', shiftCode: '2F' },
 ];
-

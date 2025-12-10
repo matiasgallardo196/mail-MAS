@@ -8,6 +8,8 @@ import { StoreStaffRequirement } from '../modules/stores/entities/store-staff-re
 import { SchedulePeriod } from '../modules/scheduling/entities/schedule-period.entity';
 import { Employee } from '../modules/employees/entities/employee.entity';
 import { EmployeeAvailability } from '../modules/employees/entities/employee-availability.entity';
+import { SchedulingPolicy } from '../modules/scheduling/entities/scheduling-policy.entity';
+import { EmploymentTypeHoursPolicy } from '../modules/scheduling/entities/employment-type-hours-policy.entity';
 import { stationsSeed } from './seeds/stations.seed';
 import { storesSeed } from './seeds/stores.seed';
 import { storeStationsSeed } from './seeds/store-stations.seed';
@@ -16,6 +18,8 @@ import { staffRequirementsSeed } from './seeds/store-staff-requirements.seed';
 import { schedulePeriodsSeed } from './seeds/schedule-periods.seed';
 import { employeesSeed } from './seeds/employees.seed';
 import { employeeAvailabilitySeed } from './seeds/employee-availability.seed';
+import { schedulingPoliciesSeed } from './seeds/scheduling-policies.seed';
+import { employmentTypeHoursSeed } from './seeds/employment-type-hours.seed';
 
 export class SeederService {
   private readonly logger = new Logger(SeederService.name);
@@ -28,6 +32,8 @@ export class SeederService {
     try {
       await this.seedStations();
       await this.seedStores();
+      await this.seedSchedulingPolicies();
+      await this.seedEmploymentTypeHoursPolicies();
       await this.seedShiftCodes();
       await this.seedStoreStations();
       await this.seedStoreStaffRequirements();
@@ -139,25 +145,18 @@ export class SeederService {
           isEnabled: storeStationData.isEnabled,
         });
         await storeStationRepository.save(storeStation);
-        this.logger.log(
-          `  ✓ Relación creada: ${storeStationData.storeCode} - ${storeStationData.stationCode}`,
-        );
+        this.logger.log(`  ✓ Relación creada: ${storeStationData.storeCode} - ${storeStationData.stationCode}`);
       } else {
-        this.logger.log(
-          `  ⊙ Relación ya existe: ${storeStationData.storeCode} - ${storeStationData.stationCode}`,
-        );
+        this.logger.log(`  ⊙ Relación ya existe: ${storeStationData.storeCode} - ${storeStationData.stationCode}`);
       }
     }
   }
 
   private async seedStoreStaffRequirements(): Promise<void> {
-    this.logger.log(
-      `Sembrando ${staffRequirementsSeed.length} requisitos de personal...`,
-    );
+    this.logger.log(`Sembrando ${staffRequirementsSeed.length} requisitos de personal...`);
     const storeRepository = this.dataSource.getRepository(Store);
     const stationRepository = this.dataSource.getRepository(Station);
-    const requirementRepository =
-      this.dataSource.getRepository(StoreStaffRequirement);
+    const requirementRepository = this.dataSource.getRepository(StoreStaffRequirement);
 
     for (const requirementData of staffRequirementsSeed) {
       const store = await storeRepository.findOne({
@@ -203,9 +202,7 @@ export class SeederService {
   }
 
   private async seedSchedulePeriods(): Promise<void> {
-    this.logger.log(
-      `Sembrando ${schedulePeriodsSeed.length} períodos de programación...`,
-    );
+    this.logger.log(`Sembrando ${schedulePeriodsSeed.length} períodos de programación...`);
     const storeRepository = this.dataSource.getRepository(Store);
     const periodRepository = this.dataSource.getRepository(SchedulePeriod);
 
@@ -215,9 +212,7 @@ export class SeederService {
       });
 
       if (!store) {
-        this.logger.warn(
-          `  ⚠ No se encontró store: ${periodData.storeCode}`,
-        );
+        this.logger.warn(`  ⚠ No se encontró store: ${periodData.storeCode}`);
         continue;
       }
 
@@ -256,9 +251,7 @@ export class SeederService {
       });
 
       if (existing) {
-        this.logger.log(
-          `  ⊙ Empleado ya existe: ${employeeData.externalCode}`,
-        );
+        this.logger.log(`  ⊙ Empleado ya existe: ${employeeData.externalCode}`);
         continue;
       }
 
@@ -273,9 +266,7 @@ export class SeederService {
         : null;
 
       if (!store) {
-        this.logger.warn(
-          `  ⚠ No se encontró store: ${employeeData.defaultStoreCode}`,
-        );
+        this.logger.warn(`  ⚠ No se encontró store: ${employeeData.defaultStoreCode}`);
         continue;
       }
 
@@ -297,16 +288,13 @@ export class SeederService {
   }
 
   private async seedEmployeeAvailability(): Promise<void> {
-    this.logger.log(
-      `Sembrando ${employeeAvailabilitySeed.length} registros de disponibilidad...`,
-    );
+    this.logger.log(`Sembrando ${employeeAvailabilitySeed.length} registros de disponibilidad...`);
     const employeeRepository = this.dataSource.getRepository(Employee);
     const storeRepository = this.dataSource.getRepository(Store);
     const shiftCodeRepository = this.dataSource.getRepository(ShiftCode);
     const periodRepository = this.dataSource.getRepository(SchedulePeriod);
     const stationRepository = this.dataSource.getRepository(Station);
-    const availabilityRepository =
-      this.dataSource.getRepository(EmployeeAvailability);
+    const availabilityRepository = this.dataSource.getRepository(EmployeeAvailability);
 
     let created = 0;
     let skipped = 0;
@@ -317,18 +305,14 @@ export class SeederService {
       });
 
       if (!employee) {
-        this.logger.warn(
-          `  ⚠ No se encontró empleado: ${availabilityData.externalCode}`,
-        );
+        this.logger.warn(`  ⚠ No se encontró empleado: ${availabilityData.externalCode}`);
         skipped++;
         continue;
       }
 
       const store = employee.defaultStore;
       if (!store) {
-        this.logger.warn(
-          `  ⚠ Empleado ${availabilityData.externalCode} no tiene store asignado`,
-        );
+        this.logger.warn(`  ⚠ Empleado ${availabilityData.externalCode} no tiene store asignado`);
         skipped++;
         continue;
       }
@@ -338,9 +322,7 @@ export class SeederService {
       });
 
       if (!shiftCode) {
-        this.logger.warn(
-          `  ⚠ No se encontró código de turno: ${availabilityData.shiftCode}`,
-        );
+        this.logger.warn(`  ⚠ No se encontró código de turno: ${availabilityData.shiftCode}`);
         skipped++;
         continue;
       }
@@ -348,7 +330,7 @@ export class SeederService {
       // Determinar el período basado en la fecha
       const date = new Date(availabilityData.date);
       date.setHours(0, 0, 0, 0); // Normalizar a medianoche para comparación
-      
+
       const periods = await periodRepository.find({
         where: { store: { id: store.id } },
       });
@@ -362,9 +344,7 @@ export class SeederService {
       });
 
       if (!period) {
-        this.logger.warn(
-          `  ⚠ No se encontró período para la fecha: ${availabilityData.date}`,
-        );
+        this.logger.warn(`  ⚠ No se encontró período para la fecha: ${availabilityData.date}`);
         skipped++;
         continue;
       }
@@ -403,9 +383,80 @@ export class SeederService {
       }
     }
 
-    this.logger.log(
-      `  ✓ Disponibilidad completada: ${created} creados, ${skipped} omitidos`,
-    );
+    this.logger.log(`  ✓ Disponibilidad completada: ${created} creados, ${skipped} omitidos`);
+  }
+
+  private async seedSchedulingPolicies(): Promise<void> {
+    this.logger.log(`Sembrando ${schedulingPoliciesSeed.length} scheduling policies...`);
+    const policyRepository = this.dataSource.getRepository(SchedulingPolicy);
+    const storeRepository = this.dataSource.getRepository(Store);
+
+    for (const policyData of schedulingPoliciesSeed) {
+      const existing = await policyRepository.findOne({
+        where: { name: policyData.name },
+      });
+
+      if (existing) {
+        this.logger.log(`  ⊙ Policy ya existe: ${policyData.name}`);
+        continue;
+      }
+
+      let store: Store | null = null;
+      if (policyData.storeCode) {
+        store = await storeRepository.findOne({
+          where: { code: policyData.storeCode },
+        });
+        if (!store) {
+          this.logger.warn(`  ⚠ No se encontró store para policy: ${policyData.storeCode}`);
+        }
+      }
+
+      const policy = policyRepository.create({
+        ...policyData,
+        store: store || undefined,
+      });
+      await policyRepository.save(policy);
+      this.logger.log(`  ✓ Policy creada: ${policyData.name}`);
+    }
+  }
+
+  private async seedEmploymentTypeHoursPolicies(): Promise<void> {
+    this.logger.log(`Sembrando ${employmentTypeHoursSeed.length} reglas de horas por tipo de empleo...`);
+    const policyRepository = this.dataSource.getRepository(SchedulingPolicy);
+    const ruleRepository = this.dataSource.getRepository(EmploymentTypeHoursPolicy);
+
+    for (const ruleData of employmentTypeHoursSeed) {
+      const policy = await policyRepository.findOne({
+        where: { name: ruleData.policyName },
+      });
+
+      if (!policy) {
+        this.logger.warn(
+          `  ⚠ No se encontró policy ${ruleData.policyName} para employmentType ${ruleData.employmentType}`,
+        );
+        continue;
+      }
+
+      const existing = await ruleRepository.findOne({
+        where: {
+          policy: { id: policy.id },
+          employmentType: ruleData.employmentType,
+        },
+      });
+
+      if (existing) {
+        this.logger.log(`  ⊙ Regla ya existe: ${ruleData.policyName} - ${ruleData.employmentType}`);
+        continue;
+      }
+
+      const rule = ruleRepository.create({
+        policy,
+        employmentType: ruleData.employmentType,
+        minHoursWeek: ruleData.minHoursWeek,
+        maxHoursWeek: ruleData.maxHoursWeek,
+      });
+      await ruleRepository.save(rule);
+      this.logger.log(`  ✓ Regla creada: ${ruleData.policyName} - ${ruleData.employmentType}`);
+    }
   }
 }
-

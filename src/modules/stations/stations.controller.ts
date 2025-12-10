@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { StationsService } from './stations.service';
 import { CreateStationDto } from './dto/create-station.dto';
@@ -48,10 +38,7 @@ export class StationsController {
   @ApiResponse({ status: 200, description: 'Estación actualizada exitosamente', type: Station })
   @ApiResponse({ status: 404, description: 'Estación no encontrada' })
   @ApiResponse({ status: 409, description: 'El código de estación ya existe' })
-  update(
-    @Param('id') id: string,
-    @Body() updateStationDto: UpdateStationDto,
-  ): Promise<Station> {
+  update(@Param('id') id: string, @Body() updateStationDto: UpdateStationDto): Promise<Station> {
     return this.stationsService.update(id, updateStationDto);
   }
 
@@ -64,4 +51,3 @@ export class StationsController {
     return this.stationsService.remove(id);
   }
 }
-

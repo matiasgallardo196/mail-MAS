@@ -1,10 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  Unique,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, Unique } from 'typeorm';
 import { BaseEntityCustom } from '../../../common/entities/base.entity';
 import { Employee } from '../../employees/entities/employee.entity';
 import { SchedulePeriod } from './schedule-period.entity';
@@ -13,12 +7,7 @@ import { Station } from '../../stations/entities/station.entity';
 import { Store } from '../../stores/entities/store.entity';
 
 @Entity('shift_assignments')
-@Unique('UQ_employee_date_assignment', [
-  'employee',
-  'date',
-  'shiftCode',
-  'station',
-])
+@Unique('UQ_employee_date_assignment', ['employee', 'date', 'shiftCode', 'station'])
 export class ShiftAssignment extends BaseEntityCustom {
   @ManyToOne(() => Employee, (employee) => employee.assignments, {
     eager: true,
@@ -26,10 +15,7 @@ export class ShiftAssignment extends BaseEntityCustom {
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
 
-  @ManyToOne(
-    () => SchedulePeriod,
-    (schedulePeriod) => schedulePeriod.assignments,
-  )
+  @ManyToOne(() => SchedulePeriod, (schedulePeriod) => schedulePeriod.assignments)
   @JoinColumn({ name: 'schedule_period_id' })
   schedulePeriod: SchedulePeriod;
 
@@ -57,4 +43,3 @@ export class ShiftAssignment extends BaseEntityCustom {
   @Column({ name: 'created_by', nullable: true })
   createdBy?: string; // id del planner / sistema
 }
-
