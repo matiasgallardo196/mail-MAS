@@ -18,15 +18,17 @@ export const EmploymentTypeRuleSchema = z.object({
   maxHoursWeek: z.number().nullable().optional(),
 });
 
+// PenaltyRule schema - ÚNICA fuente de verdad para penalty rules
+// Compatible con fairwork.tools.ts y compliance.worker.ts
 export const PenaltyRuleSchema = z.object({
   id: z.string(),
-  dayOfWeek: z.number().min(0).max(6).nullable().optional(),
-  startTime: z.string().nullable().optional(), // HH:mm:ss
-  endTime: z.string().nullable().optional(),
-  employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'CASUAL']).nullable().optional(),
+  dayOfWeek: z.number().nullable(), // 0=Sunday, 6=Saturday
+  startTime: z.string().nullable(), // HH:mm:ss
+  endTime: z.string().nullable(),
+  employmentType: z.string().nullable(), // Using string for broader compatibility
   multiplier: z.number(),
-  isPublicHoliday: z.boolean().optional(),
-  description: z.string().optional(),
+  isPublicHoliday: z.boolean(),
+  description: z.string().nullable().optional(),
 });
 
 export type SchedulingPolicy = z.infer<typeof SchedulingPolicySchema>;

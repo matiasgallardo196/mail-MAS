@@ -67,6 +67,8 @@ export class ComplianceWorker extends WorkerBase {
                   minHoursBetweenShifts: z.number().optional(),
                 })
                 .optional(),
+              // Estado australiano para detectar feriados locales (default: VIC)
+              australianState: z.string().optional(),
             }),
             execute: async (args: any): Promise<ComplianceResult> => {
               const schema = z.object({
@@ -77,9 +79,11 @@ export class ComplianceWorker extends WorkerBase {
                     minHoursBetweenShifts: z.number().optional(),
                   })
                   .optional(),
+                australianState: z.string().optional(),
               });
               const parsed = schema.parse(args);
               const roster = parsed.roster as Roster;
+              const australianState = parsed.australianState ?? 'VIC'; // Default VIC
               let employeeContracts: any[] = parsed.employeeContracts ?? [];
 
               const issues: ComplianceIssue[] = [];
@@ -228,7 +232,7 @@ export class ComplianceWorker extends WorkerBase {
                   if (penaltyRules.length) {
                     try {
                       const shiftDate = s.start.split('T')[0];
-                      const holidayInfo = isAustralianPublicHoliday(shiftDate, 'VIC');
+                      const holidayInfo = isAustralianPublicHoliday(shiftDate, australianState);
                       const isHoliday = !!holidayInfo;
 
                       const penalty = await calculatePenaltyRates({
