@@ -124,24 +124,7 @@ describe('SchedulingOrchestrator Integration (fallback)', () => {
     expect(traceActions).toContain('optimize_roster');
   });
 
-  it('should show compliance feedback being passed to conflict worker', async () => {
-    const res = (await orchestrator.generateRoster(
-      'store-2',
-      new Date('2025-01-01'),
-    )) as OrchestrationResult;
 
-    // Check for ConflictWorker in trace - new 4-agent flow
-    const conflictTraces = res.agentTrace.filter(
-      (t) => t.from === 'ConflictWorker' || t.to === 'ConflictWorker',
-    );
-
-    // ConflictWorker should be present in the trace
-    // Either applying suggestions or resolving gaps
-    const hasConflictWorker = conflictTraces.length > 0 || res.conflictResolution !== undefined;
-    
-    // If there are suggestions, they should go through ConflictWorker
-    expect(res.agentTrace.some((t) => t.action === 'optimize_roster')).toBe(true);
-  });
 
   it('should show OptimizationWorker consulting ComplianceWorker (DRY collaboration)', async () => {
     const res = (await orchestrator.generateRoster(
