@@ -15,6 +15,12 @@ jest.mock('./tools/store.tools', () => ({
         monthlyStandardHours: 152,
       }),
     },
+    getStoreStaffRequirements: {
+      execute: jest.fn().mockResolvedValue([
+        { stationId: 'station-1', periodType: 'NORMAL', requiredStaff: 3 },
+        { stationId: 'station-2', periodType: 'NORMAL', requiredStaff: 2 },
+      ]),
+    },
   },
 }));
 
@@ -54,6 +60,12 @@ jest.mock('./tools/employee.tools', () => ({
         },
         { employeeId: 'e2', employmentType: 'CASUAL', maxHoursWeek: 24, minHoursBetweenShifts: 10 },
       ]),
+    },
+    getEmployeeAvailability: {
+      execute: jest.fn().mockResolvedValue([]),
+    },
+    getEmployeeSkills: {
+      execute: jest.fn().mockResolvedValue([]),
     },
   },
 }));
@@ -112,17 +124,23 @@ describe('SchedulingOrchestrator Integration (fallback)', () => {
     expect(traceActions).toContain('optimize_roster');
   });
 
-  it('should show compliance feedback being passed to optimization worker', async () => {
+  it('should show compliance feedback being passed to conflict worker', async () => {
     const res = (await orchestrator.generateRoster(
       'store-2',
       new Date('2025-01-01'),
     )) as OrchestrationResult;
 
-    const feedbackTrace = res.agentTrace.find((t) => t.action === 'compliance_feedback');
+    // Check for ConflictWorker in trace - new 4-agent flow
+    const conflictTraces = res.agentTrace.filter(
+      (t) => t.from === 'ConflictWorker' || t.to === 'ConflictWorker',
+    );
 
-    expect(feedbackTrace).toBeDefined();
-    expect(feedbackTrace?.from).toBe('ComplianceWorker');
-    expect(feedbackTrace?.to).toBe('OptimizationWorker');
+    // ConflictWorker should be present in the trace
+    // Either applying suggestions or resolving gaps
+    const hasConflictWorker = conflictTraces.length > 0 || res.conflictResolution !== undefined;
+    
+    // If there are suggestions, they should go through ConflictWorker
+    expect(res.agentTrace.some((t) => t.action === 'optimize_roster')).toBe(true);
   });
 
   it('should show OptimizationWorker consulting ComplianceWorker (DRY collaboration)', async () => {

@@ -5,6 +5,8 @@ export const ShiftSchema = z.object({
   start: z.string(),
   end: z.string(),
   station: z.string().optional(),
+  stationId: z.string().optional(), // UUID de la estación
+  shiftCode: z.string().optional(), // Código del turno: 1F, 2F, 3F, etc.
   isPeak: z.boolean().default(false),
   baseRate: z.number().optional(),
 });

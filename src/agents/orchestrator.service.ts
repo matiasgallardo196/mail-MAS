@@ -7,6 +7,7 @@ import {
   type ComplianceValidator,
   type OptimizationResultWithQueries,
 } from './workers/optimization.worker';
+import { ConflictWorker, type ConflictResolutionResult } from './workers/conflict.worker';
 import { storeTools } from './tools/store.tools';
 import { employeeTools } from './tools/employee.tools';
 import { loadPenaltyRulesFromDb } from './tools/fairwork.tools';
@@ -34,26 +35,32 @@ export interface OrchestrationResult {
   roster: Roster;
   compliance: ComplianceResult;
   optimization?: OptimizationResultWithQueries;
+  conflictResolution?: ConflictResolutionResult;
   agentTrace: AgentMessage[];
   metrics?: {
     totalDurationMs: number;
     costSavingsPercent?: number;
     suggestionsApplied?: number;
     validationQueriesCount?: number;
+    coverageGapsResolved?: number;
   };
 }
 
 /**
  * SchedulingOrchestrator - Coordina la colaboración entre agents
  *
- * Flujo de colaboración (DRY):
- * 1. RosterWorker → genera roster inicial
- * 2. ComplianceWorker → valida y genera suggestions
- * 3. OptimizationWorker → aplica suggestions + optimiza (consultando a ComplianceWorker)
- * 4. ComplianceWorker → validación final (confirmación)
+ * Flujo de colaboración (4 agents):
+ * 1. RosterWorker → genera roster inicial + detecta coverage gaps
+ * 2. ComplianceWorker → valida Fair Work y genera suggestions
+ * 3. ConflictWorker → aplica suggestions + resuelve coverage gaps
+ * 4. OptimizationWorker → optimiza costos (consultando a ComplianceWorker)
+ * 5. ComplianceWorker → validación final (confirmación)
  *
- * La clave es que OptimizationWorker CONSULTA a ComplianceWorker para cada
- * optimización adicional, respetando DRY y mostrando colaboración real.
+ * La clave es que cada agent tiene una responsabilidad clara:
+ * - RosterWorker: Generación inicial
+ * - ComplianceWorker: Validación legal
+ * - ConflictWorker: Resolución de problemas
+ * - OptimizationWorker: Mejora de costos
  */
 @Injectable()
 export class SchedulingOrchestrator {
@@ -61,16 +68,21 @@ export class SchedulingOrchestrator {
   private orchestrator: IOrchestrator<unknown, Roster> | null = null;
 
   constructor() {
-    this.logger.log('SchedulingOrchestrator initialized');
+    this.logger.log('SchedulingOrchestrator initialized with 4 workers');
     try {
       const OrchestratorClass = require('@openai/agents')?.Orchestrator;
       const planner = new OrchestrationPlanner();
-      const workers = [new RosterWorker(), new ComplianceWorker(), new OptimizationWorker()];
+      const workers = [
+        new RosterWorker(),
+        new ComplianceWorker(),
+        new ConflictWorker(),
+        new OptimizationWorker(),
+      ];
       if (OrchestratorClass) {
         this.orchestrator = new OrchestratorClass({
           planner,
           workers,
-          config: { maxSteps: 20, timeout: 60_000 },
+          config: { maxSteps: 30, timeout: 90_000 },
         });
       }
     } catch {
@@ -109,12 +121,14 @@ export class SchedulingOrchestrator {
   }
 
   /**
-   * Genera un roster optimizado con validación de compliance
-   * Implementa el flujo de colaboración entre agents
+   * Genera un roster optimizado con validación de compliance y resolución de conflictos
+   * Implementa el flujo de colaboración entre 4 agents
    */
   async generateRoster(storeId: string, weekStart: Date): Promise<OrchestrationResult> {
     const startTime = Date.now();
     const agentTrace: AgentMessage[] = [];
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
 
     const addTrace = (from: string, to: string, action: string, data?: unknown) => {
       agentTrace.push({
@@ -142,9 +156,11 @@ export class SchedulingOrchestrator {
         };
       }
 
-      // --- FALLBACK: Flujo de colaboración manual ---
+      // --- FALLBACK: Flujo de colaboración manual (4 agents) ---
 
-      // 1️⃣ Roster Generation
+      // ═══════════════════════════════════════════════════════════════
+      // PASO 1: RosterWorker - Generación inicial
+      // ═══════════════════════════════════════════════════════════════
       addTrace('Orchestrator', 'RosterWorker', 'generate_initial_roster');
       const rosterWorker = new RosterWorker();
       const rosterTool = rosterWorker.tools?.find(
@@ -154,18 +170,46 @@ export class SchedulingOrchestrator {
         throw new Error('generate_initial_roster tool not found');
       }
 
-      const initialRoster = (await rosterTool.function.execute({
+      const initialRosterResult = (await rosterTool.function.execute({
         storeId,
-        weekStart: weekStart.toISOString(),
-        employeeIds: [],
-      })) as Roster;
+        weekStart: weekStart.toISOString().split('T')[0],
+        weekEnd: weekEnd.toISOString().split('T')[0],
+      })) as Roster & { metrics?: { warnings?: string[] } };
 
       addTrace('RosterWorker', 'Orchestrator', 'roster_generated', {
-        shiftsCount: initialRoster.roster.length,
+        shiftsCount: initialRosterResult.roster.length,
+        warningsCount: initialRosterResult.metrics?.warnings?.length ?? 0,
       });
 
-      // 1.5️⃣ Cargar contratos de empleados del roster
-      const employeeIds = [...new Set(initialRoster.roster.map((s) => s.employeeId))];
+      let workingRoster: Roster = initialRosterResult;
+
+      // Detectar gaps de cobertura del roster inicial
+      const coverageValidateTool = rosterWorker.tools?.find(
+        (t) => t.function?.name === 'validate_coverage',
+      );
+
+      let coverageGaps: any[] = [];
+      if (coverageValidateTool) {
+        try {
+          const staffRequirements = await storeTools.getStoreStaffRequirements.execute({ storeId });
+          const coverage = await coverageValidateTool.function.execute({
+            roster: workingRoster,
+            staffRequirements,
+          });
+          coverageGaps = (coverage as any).uncoveredSlots || [];
+          addTrace('RosterWorker', 'Orchestrator', 'coverage_validated', {
+            score: (coverage as any).coverageScore,
+            gapsCount: coverageGaps.length,
+          });
+        } catch (err) {
+          addTrace('RosterWorker', 'Orchestrator', 'coverage_validation_failed', {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
+      // Cargar contratos de empleados del roster
+      const employeeIds = [...new Set(workingRoster.roster.map((s) => s.employeeId))];
       let employeeContracts: EmployeeContract[] = [];
 
       if (employeeIds.length > 0) {
@@ -179,14 +223,15 @@ export class SchedulingOrchestrator {
             count: employeeContracts.length,
           });
         } catch (error) {
-          // Si falla, ComplianceWorker intentará cargarlos internamente
           addTrace('EmployeeTools', 'Orchestrator', 'contracts_load_failed', {
             error: error instanceof Error ? error.message : String(error),
           });
         }
       }
 
-      // 2️⃣ Initial Compliance Check
+      // ═══════════════════════════════════════════════════════════════
+      // PASO 2: ComplianceWorker - Validación inicial
+      // ═══════════════════════════════════════════════════════════════
       addTrace('Orchestrator', 'ComplianceWorker', 'validate_fair_work_compliance');
       const complianceWorker = new ComplianceWorker();
       const complianceTool = complianceWorker.tools?.find(
@@ -197,7 +242,7 @@ export class SchedulingOrchestrator {
       }
 
       const initialCompliance = (await complianceTool.function.execute({
-        roster: initialRoster,
+        roster: workingRoster,
         employeeContracts,
       })) as ComplianceResult;
 
@@ -207,90 +252,167 @@ export class SchedulingOrchestrator {
         suggestionsCount: initialCompliance.suggestions?.length ?? 0,
       });
 
-      // Check for CRITICAL issues sin sugerencias → human review
-      const hasCritical = initialCompliance.issues?.some((i) => i.severity === 'CRITICAL');
-      if (hasCritical && !initialCompliance.suggestions?.length) {
+      // Check for CRITICAL issues sin sugerencias → human review inmediato
+      const hasCriticalWithoutFix =
+        initialCompliance.issues?.some((i) => i.severity === 'CRITICAL') &&
+        !initialCompliance.suggestions?.length;
+
+      if (hasCriticalWithoutFix) {
         addTrace('Orchestrator', 'HumanReview', 'critical_compliance_violation', {
           issues: initialCompliance.issues?.filter((i) => i.severity === 'CRITICAL'),
         });
 
         return {
           status: 'requires_human_review',
-          roster: initialRoster,
+          roster: workingRoster,
           compliance: initialCompliance,
           agentTrace,
           metrics: { totalDurationMs: Date.now() - startTime },
         };
       }
 
-      // 3️⃣ Optimization con validación colaborativa
-      addTrace('ComplianceWorker', 'OptimizationWorker', 'compliance_feedback', {
-        suggestions: initialCompliance.suggestions?.map((s) => ({
-          type: s.type,
-          employeeId: s.employeeId,
-          reason: s.reason,
-        })),
-      });
+      // ═══════════════════════════════════════════════════════════════
+      // PASO 3: ConflictWorker - Aplicar correcciones y resolver gaps
+      // ═══════════════════════════════════════════════════════════════
+      const conflictWorker = new ConflictWorker();
+      let conflictResolution: ConflictResolutionResult | undefined;
+      let totalGapsResolved = 0;
+
+      // 3.1: Aplicar sugerencias de ComplianceWorker
+      if (initialCompliance.suggestions?.length) {
+        addTrace('ComplianceWorker', 'ConflictWorker', 'apply_suggestions', {
+          suggestionsCount: initialCompliance.suggestions.length,
+        });
+
+        const applySuggestionsTool = conflictWorker.tools?.find(
+          (t) => t.function?.name === 'apply_suggestions',
+        );
+
+        if (applySuggestionsTool) {
+          const result = (await applySuggestionsTool.function.execute({
+            roster: workingRoster,
+            suggestions: initialCompliance.suggestions,
+          })) as ConflictResolutionResult;
+
+          workingRoster = result.roster;
+          conflictResolution = result;
+
+          addTrace('ConflictWorker', 'Orchestrator', 'suggestions_applied', {
+            resolved: result.resolved,
+            unresolved: result.unresolved,
+            actionsCount: result.actions.length,
+          });
+        }
+      }
+
+      // 3.2: Resolver gaps de cobertura
+      if (coverageGaps.length > 0) {
+        addTrace('RosterWorker', 'ConflictWorker', 'resolve_coverage_gaps', {
+          gapsCount: coverageGaps.length,
+        });
+
+        const resolveGapsTool = conflictWorker.tools?.find(
+          (t) => t.function?.name === 'resolve_coverage_gaps',
+        );
+
+        if (resolveGapsTool) {
+          const result = (await resolveGapsTool.function.execute({
+            roster: workingRoster,
+            gaps: coverageGaps,
+            storeId,
+            weekStart: weekStart.toISOString().split('T')[0],
+            weekEnd: weekEnd.toISOString().split('T')[0],
+          })) as ConflictResolutionResult;
+
+          workingRoster = result.roster;
+          totalGapsResolved = result.resolved;
+
+          // Merge con conflictResolution anterior si existe
+          if (conflictResolution) {
+            conflictResolution = {
+              ...conflictResolution,
+              roster: result.roster,
+              resolved: conflictResolution.resolved + result.resolved,
+              unresolved: conflictResolution.unresolved + result.unresolved,
+              actions: [...conflictResolution.actions, ...result.actions],
+              warnings: [...conflictResolution.warnings, ...result.warnings],
+              requiresHumanReview:
+                conflictResolution.requiresHumanReview || result.requiresHumanReview,
+            };
+          } else {
+            conflictResolution = result;
+          }
+
+          addTrace('ConflictWorker', 'Orchestrator', 'gaps_resolved', {
+            resolved: result.resolved,
+            unresolved: result.unresolved,
+            newShiftsCount: workingRoster.roster.length,
+          });
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // PASO 4: OptimizationWorker - Optimización de costos
+      // ═══════════════════════════════════════════════════════════════
+      addTrace('Orchestrator', 'OptimizationWorker', 'optimize_roster');
 
       const optimizationWorker = new OptimizationWorker();
       const optimizationTool = optimizationWorker.tools?.find(
         (t) => t.function?.name === 'optimize_roster',
       );
 
-      if (!optimizationTool) {
-        return {
-          status: 'ok',
-          roster: initialRoster,
-          compliance: initialCompliance,
-          agentTrace,
-          metrics: { totalDurationMs: Date.now() - startTime },
-        };
-      }
+      let optimizationResult: OptimizationResultWithQueries | undefined;
 
-      // Cargar penalty rules para optimización
-      const penaltyRules = await loadPenaltyRulesFromDb(storeId);
+      if (optimizationTool) {
+        // Cargar penalty rules para optimización
+        const penaltyRules = await loadPenaltyRulesFromDb(storeId);
 
-      // Cargar constraints de policy
-      let constraints = { minHoursBetweenShifts: 10, minShiftHours: 3, maxShiftHours: 12 };
-      try {
-        const policy = await storeTools.getStorePolicy.execute({ storeId });
-        if (policy) {
-          constraints.minHoursBetweenShifts = policy.minHoursBetweenShifts ?? 10;
+        // Cargar constraints de policy
+        let constraints = { minHoursBetweenShifts: 10, minShiftHours: 3, maxShiftHours: 12 };
+        try {
+          const policy = await storeTools.getStorePolicy.execute({ storeId });
+          if (policy) {
+            constraints.minHoursBetweenShifts = policy.minHoursBetweenShifts ?? 10;
+          }
+        } catch {
+          // Usar defaults
         }
-      } catch {
-        // Usar defaults
+
+        // Crear validador para que OptimizationWorker consulte a ComplianceWorker
+        const complianceValidator = this.createComplianceValidator(complianceTool, addTrace);
+
+        addTrace('Orchestrator', 'OptimizationWorker', 'inject_compliance_validator', {
+          note: 'OptimizationWorker consultará a ComplianceWorker para cada optimización',
+        });
+
+        optimizationResult = (await optimizationTool.function.execute({
+          roster: workingRoster,
+          complianceFeedback: {
+            issues: [],
+            suggestions: [], // Ya fueron aplicadas por ConflictWorker
+          },
+          constraints,
+          penaltyRules,
+          complianceValidator,
+        })) as OptimizationResultWithQueries;
+
+        workingRoster = optimizationResult.roster;
+
+        addTrace('OptimizationWorker', 'Orchestrator', 'optimization_complete', {
+          score: optimizationResult.score,
+          savingsPercent: optimizationResult.metrics.savingsPercent,
+          validationQueries: optimizationResult.validationQueries?.length ?? 0,
+          queriesPassed: optimizationResult.validationQueries?.filter((q) => q.passed).length ?? 0,
+        });
       }
 
-      // Crear validador que el OptimizationWorker usará para consultar a ComplianceWorker
-      const complianceValidator = this.createComplianceValidator(complianceTool, addTrace);
-
-      addTrace('Orchestrator', 'OptimizationWorker', 'optimize_roster', {
-        note: 'OptimizationWorker consultará a ComplianceWorker para cada optimización',
-      });
-
-      const optimizationResult = (await optimizationTool.function.execute({
-        roster: initialRoster,
-        complianceFeedback: {
-          issues: initialCompliance.issues,
-          suggestions: initialCompliance.suggestions,
-        },
-        constraints,
-        penaltyRules,
-        complianceValidator, // ← Inyección del validador
-      })) as OptimizationResultWithQueries;
-
-      addTrace('OptimizationWorker', 'Orchestrator', 'optimization_complete', {
-        score: optimizationResult.score,
-        suggestionsApplied: optimizationResult.metrics.suggestionsApplied,
-        savingsPercent: optimizationResult.metrics.savingsPercent,
-        validationQueries: optimizationResult.validationQueries?.length ?? 0,
-        queriesPassed: optimizationResult.validationQueries?.filter((q) => q.passed).length ?? 0,
-      });
-
-      // 4️⃣ Final Compliance Verification (confirmación)
+      // ═══════════════════════════════════════════════════════════════
+      // PASO 5: ComplianceWorker - Validación final
+      // ═══════════════════════════════════════════════════════════════
       addTrace('Orchestrator', 'ComplianceWorker', 'final_validation');
+
       const finalCompliance = (await complianceTool.function.execute({
-        roster: optimizationResult.roster,
+        roster: workingRoster,
         employeeContracts: [],
       })) as ComplianceResult;
 
@@ -299,21 +421,30 @@ export class SchedulingOrchestrator {
         issuesCount: finalCompliance.issues?.length ?? 0,
       });
 
-      // Ya no necesitamos retry porque cada cambio fue validado antes de aplicar
-      // Si hay CRITICAL aquí, algo muy raro pasó (bug en las suggestions de compliance)
+      // Determinar status final
       const finalHasCritical = finalCompliance.issues?.some((i) => i.severity === 'CRITICAL');
+      const requiresReview = conflictResolution?.requiresHumanReview || finalHasCritical;
+
+      let status: OrchestrationResult['status'] = 'ok';
+      if (requiresReview) {
+        status = finalHasCritical ? 'requires_human_review' : 'partial';
+      }
 
       return {
-        status: finalHasCritical ? 'partial' : 'ok',
-        roster: optimizationResult.roster,
+        status,
+        roster: workingRoster,
         compliance: finalCompliance,
         optimization: optimizationResult,
+        conflictResolution,
         agentTrace,
         metrics: {
           totalDurationMs: Date.now() - startTime,
-          costSavingsPercent: optimizationResult.metrics.savingsPercent,
-          suggestionsApplied: optimizationResult.metrics.suggestionsApplied,
-          validationQueriesCount: optimizationResult.validationQueries?.length ?? 0,
+          costSavingsPercent: optimizationResult?.metrics.savingsPercent,
+          suggestionsApplied:
+            (conflictResolution?.resolved ?? 0) +
+            (optimizationResult?.metrics.suggestionsApplied ?? 0),
+          validationQueriesCount: optimizationResult?.validationQueries?.length ?? 0,
+          coverageGapsResolved: totalGapsResolved,
         },
       };
     } catch (error) {
