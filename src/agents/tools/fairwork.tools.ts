@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import { differenceInHours, parseISO } from 'date-fns';
 import { PenaltyRule as PenaltyRuleEntity } from '../../modules/scheduling/entities/penalty-rule.entity';
+// Re-export PenaltyRule from policy.schema for DRY
+import {
+  PenaltyRuleSchema,
+  type PenaltyRule,
+} from '../../shared/schemas/policy.schema';
+
+// Re-export for backwards compatibility
+export { PenaltyRuleSchema, type PenaltyRule };
 
 // --- Check Rest Period ---
 export const CheckRestPeriodParams = z.object({
@@ -32,19 +40,6 @@ export async function checkRestPeriod(params: CheckRestPeriodParamsType): Promis
     minHours: p.minHours,
   };
 }
-
-// --- Penalty Rule Schema (from DB) ---
-export const PenaltyRuleSchema = z.object({
-  id: z.string(),
-  dayOfWeek: z.number().nullable(),
-  startTime: z.string().nullable(),
-  endTime: z.string().nullable(),
-  employmentType: z.string().nullable(),
-  multiplier: z.number(),
-  isPublicHoliday: z.boolean(),
-  description: z.string().nullable().optional(),
-});
-export type PenaltyRule = z.infer<typeof PenaltyRuleSchema>;
 
 // --- Load Penalty Rules from DB ---
 export async function loadPenaltyRulesFromDb(storeId?: string): Promise<PenaltyRule[]> {
