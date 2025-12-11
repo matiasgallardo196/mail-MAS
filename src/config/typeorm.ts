@@ -19,7 +19,7 @@ const baseConfig: DataSourceOptions = {
   //logger: 'advanced-console',
   //logNotifications: true,
   //dropSchema: true,
-  // ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: false },
   // uuidExtension: 'pgcrypto',
 };
 

@@ -19,6 +19,8 @@ import { SchedulingPolicy } from './entities/scheduling-policy.entity';
 import { EmploymentTypeHoursPolicy } from './entities/employment-type-hours-policy.entity';
 import { SchedulingPolicyService } from './scheduling-policy.service';
 
+import { SchedulingOrchestratorController } from './orchestrator.controller';
+
 const logger = new Logger('SchedulingModule');
 
 @Module({
@@ -36,7 +38,12 @@ const logger = new Logger('SchedulingModule');
       EmploymentTypeHoursPolicy,
     ]),
   ],
-  controllers: [ShiftCodesController, SchedulePeriodsController, ShiftAssignmentsController],
+  controllers: [
+    ShiftCodesController,
+    SchedulePeriodsController,
+    ShiftAssignmentsController,
+    SchedulingOrchestratorController,
+  ],
   providers: [
     SchedulingOrchestrator,
     ShiftCodesService,
@@ -52,4 +59,4 @@ const logger = new Logger('SchedulingModule');
     SchedulingPolicyService,
   ],
 })
-export class SchedulingModule {}
+export class SchedulingModule { }

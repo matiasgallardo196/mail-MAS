@@ -12,6 +12,7 @@ import {
   EmployeeSkillSchema,
 } from '../../shared/schemas/employee.schema';
 import type { EmployeeContract, EmployeeAvailability as Availability, EmployeeSkill } from '../../shared/types/employee';
+import { resolveStoreId } from './store.tools';
 
 const GetContractsInput = z.object({
   storeId: z.string(),
@@ -58,9 +59,24 @@ export const employeeTools = {
     inputSchema: GetContractsInput,
     outputSchema: z.array(EmployeeContractSchema),
     execute: async ({ storeId, employeeIds }: z.infer<typeof GetContractsInput>): Promise<EmployeeContract[]> => {
+      const resolvedStoreId = await resolveStoreId(storeId);
       const ds = await getDataSource();
       const employeeRepo = ds.getRepository(Employee);
-      const policy = await resolvePolicy(storeId);
+      // resolvePolicy needs to be updated or we just pass the resolved ID if resolvePolicy expects raw ID
+      // But looking at employee.tools.ts resolvePolicy:
+      /* 
+         async function resolvePolicy(storeId: string): Promise<SchedulingPolicy | null> {
+           const ds = await getDataSource();
+           const repo = ds.getRepository(SchedulingPolicy);
+           const byStore = await repo.findOne({
+             where: { store: { id: storeId }, scope: PolicyScope.STORE },
+             ...
+           });
+           ...
+         }
+      */
+      // It uses id directly. So passing resolvedStoreId is correct.
+      const policy = await resolvePolicy(resolvedStoreId);
       const hoursPolicyRepo = ds.getRepository(EmploymentTypeHoursPolicy);
       const hoursPolicies = policy
         ? await hoursPolicyRepo.find({ where: { policy: { id: policy.id } } })
@@ -94,11 +110,12 @@ export const employeeTools = {
       endDate,
       employeeIds,
     }: z.infer<typeof GetAvailabilityInput>): Promise<Availability[]> => {
+      const resolvedStoreId = await resolveStoreId(storeId);
       const ds = await getDataSource();
       const availabilityRepo = ds.getRepository(EmployeeAvailability);
       const records = await availabilityRepo.find({
         where: {
-          store: { id: storeId },
+          store: { id: resolvedStoreId },
           employee: { id: In(employeeIds) },
           date: Between(new Date(startDate), new Date(endDate)),
         },

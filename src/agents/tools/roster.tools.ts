@@ -186,7 +186,10 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
       metrics: {
         totalShifts: 0,
         employeesAssigned: 0,
-        warnings: ['No se pudo conectar a la base de datos para obtener disponibilidad'],
+        warnings: [
+          'No se pudo conectar a la base de datos para obtener disponibilidad',
+          `Detalle error: ${error instanceof Error ? error.message : String(error)}`,
+        ],
       },
     };
   }

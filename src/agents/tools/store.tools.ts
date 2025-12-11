@@ -42,7 +42,29 @@ async function getDataSource() {
   return connectionSource;
 }
 
-async function resolvePolicy(storeId: string): Promise<SchedulingPolicy | null> {
+// Helper to resolve storeId (UUID) from code (string) if needed
+export async function resolveStoreId(idOrCode: string): Promise<string> {
+  // Simple regex for UUID v4
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (uuidRegex.test(idOrCode)) {
+    return idOrCode;
+  }
+
+  const ds = await getDataSource();
+  const repo = ds.getRepository(Store);
+  // Try resolving as code
+  const store = await repo.findOne({ where: { code: idOrCode } });
+
+  if (!store) {
+    throw new Error(`Store not found with id/code: ${idOrCode}`);
+  }
+
+  return store.id;
+}
+
+async function resolvePolicy(idOrCode: string): Promise<SchedulingPolicy | null> {
+  const storeId = await resolveStoreId(idOrCode);
   const ds = await getDataSource();
   const repo = ds.getRepository(SchedulingPolicy);
   const byStore = await repo.findOne({
@@ -60,14 +82,15 @@ export const storeTools = {
     inputSchema: GetStoreInput,
     outputSchema: StoreHoursSchema,
     execute: async ({ storeId }: z.infer<typeof GetStoreInput>) => {
+      const resolvedId = await resolveStoreId(storeId);
       const ds = await getDataSource();
       const repo = ds.getRepository(Store);
-      const store = await repo.findOne({ where: { id: storeId } });
+      const store = await repo.findOne({ where: { id: resolvedId } });
       if (!store) {
         throw new Error(`Store ${storeId} no encontrada`);
       }
       return StoreHoursSchema.parse({
-        storeId,
+        storeId: resolvedId, // Return the UUID
         openingTime: store.openingTime ?? null,
         closingTime: store.closingTime ?? null,
       });
@@ -80,10 +103,11 @@ export const storeTools = {
     inputSchema: GetStoreInput,
     outputSchema: StoreRequirementsSchema,
     execute: async ({ storeId }: z.infer<typeof GetStoreInput>) => {
+      const resolvedId = await resolveStoreId(storeId);
       const ds = await getDataSource();
       const repo = ds.getRepository(StoreStaffRequirement);
       const requirements = await repo.find({
-        where: { store: { id: storeId } },
+        where: { store: { id: resolvedId } },
         relations: ['station', 'store'],
       });
       return StoreRequirementsSchema.parse(
@@ -102,6 +126,7 @@ export const storeTools = {
     inputSchema: GetStorePolicyInput,
     outputSchema: SchedulingPolicySchema.nullable(),
     execute: async ({ storeId }: z.infer<typeof GetStorePolicyInput>) => {
+      // resolvePolicy already calls resolveStoreId internally now
       const policy = await resolvePolicy(storeId);
       if (!policy) return null;
       return SchedulingPolicySchema.parse({
