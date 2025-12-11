@@ -5,8 +5,12 @@ import { isAustralianPublicHoliday } from '../tools/australian-holidays';
 import { storeTools } from '../tools/store.tools';
 import { employeeTools } from '../tools/employee.tools';
 import { ComplianceResultSchema } from '../../shared/schemas/compliance.schema';
+import { RosterSchema } from '../../shared/schemas/roster.schema';
+import { EmployeeContractSchema } from '../../shared/schemas/employee.schema';
+import { hoursBetween, addHoursToIso } from '../../shared/utils/time.utils';
 import type { ComplianceResult, ComplianceIssue, ComplianceSuggestion } from '../../shared/types/compliance';
 import type { Roster } from '../../shared/types/roster';
+import type { Shift } from '../../shared/types/shift';
 
 const WorkerBase = (() => {
   try {
@@ -30,29 +34,34 @@ const MIN_SHIFT_HOURS_CASUAL = 3;
 // Maximum shift span (12 hours as per Fair Work)
 const MAX_SHIFT_SPAN_HOURS = 12;
 
-function hoursBetween(startIso: string, endIso: string): number {
-  const start = new Date(startIso).getTime();
-  const end = new Date(endIso).getTime();
-  return Math.max(0, (end - start) / 3_600_000);
-}
-
-function addHoursToIso(isoString: string, hours: number): string {
-  const date = new Date(isoString);
-  date.setTime(date.getTime() + hours * 3_600_000);
-  return date.toISOString();
-}
+// Removed: hoursBetween and addHoursToIso - now imported from shared/utils/time.utils
 
 export class ComplianceWorker extends WorkerBase {
   constructor() {
     super({
       name: 'ComplianceWorker',
       instructions: `Valida cumplimiento Fair Work usando datos 100% de la DB (políticas, penalty_rules, contratos).
-      - Carga minHoursBetweenShifts y maxHoursWeek desde la DB (SchedulingPolicy + EmploymentTypeHoursPolicy).
-      - Detecta feriados australianos automáticamente (sin DB de feriados).
-      - Valida: descansos entre turnos, horas máx semanales, duración mínima 3h (casuals), max span 12h.
-      - Si faltan penalty_rules o policy en DB, devuelve CRITICAL.
-      - Genera sugerencias de cambio para cada issue encontrado (feedback para RosterWorker).
-      - Siempre devuelve JSON que cumpla ComplianceResultSchema.`,
+
+RESPONSABILIDADES:
+- Carga minHoursBetweenShifts y maxHoursWeek desde la DB (SchedulingPolicy + EmploymentTypeHoursPolicy).
+- Detecta feriados australianos automáticamente (sin DB de feriados).
+- Valida: descansos entre turnos, horas máx semanales, duración mínima 3h (casuals), max span 12h.
+- Si faltan penalty_rules o policy en DB, devuelve CRITICAL.
+- Genera sugerencias de cambio para cada issue encontrado (feedback para ConflictWorker).
+- Siempre devuelve JSON que cumpla ComplianceResultSchema.
+
+CLASIFICACIÓN DE SEVERIDADES:
+- CRITICAL: Violaciones legales que DEBEN corregirse antes de publicar el roster.
+  Ejemplos: turno casual <3h, descanso insuficiente entre turnos, supera horas máx semanales.
+  Acción: ConflictWorker DEBE aplicar la sugerencia asociada.
+
+- MAJOR: Problemas significativos que deberían corregirse pero no bloquean.
+  Ejemplos: turno en feriado con alto multiplier de costo, balance desigual de horas.
+  Acción: OptimizationWorker debería considerar optimizar.
+
+- MINOR: Alertas informativas que no requieren acción inmediata.
+  Ejemplos: falta contrato en DB (usa defaults), warning de configuración.
+  Acción: Registrar para review pero no bloquear.`,
       tools: [
         {
           type: 'function',
@@ -60,8 +69,8 @@ export class ComplianceWorker extends WorkerBase {
             name: 'validate_fair_work_compliance',
             description: 'Valida un roster contra Fair Work Act y genera sugerencias de corrección',
             parameters: z.object({
-              roster: z.any(),
-              employeeContracts: z.array(z.any()).optional(),
+              roster: RosterSchema,
+              employeeContracts: z.array(EmployeeContractSchema).optional(),
               schedulingPolicy: z
                 .object({
                   minHoursBetweenShifts: z.number().optional(),
@@ -72,8 +81,8 @@ export class ComplianceWorker extends WorkerBase {
             }),
             execute: async (args: any): Promise<ComplianceResult> => {
               const schema = z.object({
-                roster: z.any(),
-                employeeContracts: z.array(z.any()).optional(),
+                roster: RosterSchema,
+                employeeContracts: z.array(EmployeeContractSchema).optional(),
                 schedulingPolicy: z
                   .object({
                     minHoursBetweenShifts: z.number().optional(),

@@ -18,6 +18,13 @@ import {
   type PenaltyRule,
 } from '../tools/fairwork.tools';
 import { isAustralianPublicHoliday } from '../tools/australian-holidays';
+import {
+  hoursBetween,
+  addHoursToIso,
+  getDayOfWeek,
+  getTimeString,
+  getDateString,
+} from '../../shared/utils/time.utils';
 
 // Fallback Worker base class
 const WorkerBase = (() => {
@@ -83,30 +90,8 @@ export interface OptimizationResultWithQueries extends OptimizationResult {
 }
 
 // --- Utility functions ---
-
-function hoursBetween(startIso: string, endIso: string): number {
-  const start = new Date(startIso).getTime();
-  const end = new Date(endIso).getTime();
-  return Math.max(0, (end - start) / 3_600_000);
-}
-
-function addHoursToIso(isoString: string, hours: number): string {
-  const date = new Date(isoString);
-  date.setTime(date.getTime() + hours * 3_600_000);
-  return date.toISOString();
-}
-
-function getDayOfWeek(isoString: string): number {
-  return new Date(isoString).getUTCDay();
-}
-
-function getTimeString(isoString: string): string {
-  return isoString.split('T')[1]?.split('.')[0] ?? '00:00:00';
-}
-
-function getDateString(isoString: string): string {
-  return isoString.split('T')[0];
-}
+// Imported from shared/utils/time.utils.ts:
+// - hoursBetween, addHoursToIso, getDayOfWeek, getTimeString, getDateString
 
 /**
  * Calcula el costo relativo de un turno basado en su duración y multiplier de penalty
