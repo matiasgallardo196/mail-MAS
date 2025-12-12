@@ -126,13 +126,39 @@ function createShiftFromAvailability(
 
 /**
  * Aplica una sugerencia de ComplianceWorker al roster
+ * 
+ * AUTONOMOUS BEHAVIOR:
+ * - For REMOVE_SHIFT without shiftIndex: finds and removes the employee's last shift
+ * - For ASSIGN_MORE_SHIFTS: delegates to resolve_coverage_gaps tool
  */
 function applySuggestion(
   roster: Roster,
   suggestion: ComplianceSuggestion,
 ): { applied: boolean; description: string } {
   const shifts = roster.roster;
-  const shiftIndex = suggestion.shiftIndex;
+  let shiftIndex = suggestion.shiftIndex;
+
+  // AUTONOMOUS: For REMOVE_SHIFT without shiftIndex, find the employee's last shift
+  if (suggestion.type === 'REMOVE_SHIFT' && shiftIndex === undefined && suggestion.employeeId) {
+    const employeeShiftIndices = shifts
+      .map((s, idx) => ({ shift: s, idx }))
+      .filter(entry => entry.shift.employeeId === suggestion.employeeId)
+      .map(entry => entry.idx);
+    
+    if (employeeShiftIndices.length === 0) {
+      return { applied: false, description: `No se encontraron turnos para ${suggestion.employeeId}` };
+    }
+    // Pick the last shift (most likely to be the excess that pushed over the limit)
+    shiftIndex = employeeShiftIndices[employeeShiftIndices.length - 1];
+  }
+
+  // ASSIGN_MORE_SHIFTS is handled by resolve_coverage_gaps, not here
+  if (suggestion.type === 'ASSIGN_MORE_SHIFTS') {
+    return { 
+      applied: false, 
+      description: `ASSIGN_MORE_SHIFTS para ${suggestion.employeeId} debe resolverse via resolve_coverage_gaps` 
+    };
+  }
 
   if (shiftIndex === undefined || shiftIndex < 0 || shiftIndex >= shifts.length) {
     return { applied: false, description: `Índice de turno inválido: ${shiftIndex}` };
