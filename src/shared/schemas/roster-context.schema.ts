@@ -10,6 +10,7 @@ import {
  */
 export const StaffRequirementSchema = z.object({
   stationId: z.string(),
+  stationName: z.string().optional(),
   stationCode: z.string().optional(),
   periodType: z.enum(['NORMAL', 'PEAK']),
   requiredStaff: z.number(),

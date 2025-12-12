@@ -50,6 +50,7 @@ export const AppliedOptimizationSchema = z.object({
     'MOVED_SHIFT', // Movió un turno a horario más barato
     'SWAPPED_SHIFTS', // Intercambió turnos entre empleados
     'BALANCED_HOURS', // Balanceó horas entre empleados
+    'ADDED_SHIFT', // Agregó turno para cubrir gap
   ]),
   description: z.string(),
   shiftIndex: z.number().optional(),

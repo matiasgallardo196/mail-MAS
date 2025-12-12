@@ -153,6 +153,7 @@ export async function getRosterContext(params: GetRosterContextParamsType): Prom
     availability,
     staffRequirements: staffRequirements.map((req) => ({
       stationId: req.stationId,
+      stationName: (req as any).stationName,
       periodType: req.periodType,
       requiredStaff: req.requiredStaff,
     })),

@@ -25,6 +25,11 @@ import {
   getTimeString,
   getDateString,
 } from '../../shared/utils/time.utils';
+import {
+  getRosterContext,
+  validateCoverage,
+} from '../tools/roster.tools';
+import { RosterContextSchema } from '../../shared/schemas/roster-context.schema';
 
 // Fallback Worker base class
 const WorkerBase = (() => {
@@ -223,6 +228,180 @@ function applySuggestion(
 
   return { applied: false, description: `No se pudo aplicar sugerencia: ${suggestion.type}` };
 }
+
+/**
+ * Intenta resolver gaps de cobertura agregando turnos
+ */
+async function resolveCoverageGaps(
+  roster: Roster,
+  validator: ComplianceValidator,
+): Promise<{
+  roster: Roster;
+  addedShifts: AppliedOptimization[];
+  queries: ValidationQuery[];
+}> {
+  const addedShifts: AppliedOptimization[] = [];
+  const queries: ValidationQuery[] = [];
+  let currentRoster: Roster = JSON.parse(JSON.stringify(roster));
+
+  // 1. Obtener contexto para saber qué falta y quién está disponible
+  // Nota: Esto hace fetch a DB. En un sistema real optimizado, esto podría venir en el input.
+  const context = await getRosterContext({
+    storeId: roster.storeId,
+    weekStart: roster.weekStart,
+    weekEnd: addHoursToIso(roster.weekStart, 24 * 6), // aprox
+  });
+
+  // 2. Validar cobertura actual
+  const coverage = await validateCoverage({
+    roster: currentRoster,
+    staffRequirements: context.staffRequirements,
+  });
+
+  if (coverage.uncoveredSlots.length === 0) {
+    return { roster: currentRoster, addedShifts, queries };
+  }
+
+  // 3. Intentar llenar gaps
+  // Iterar por cada día y requerimiento para encontrar lo que falta
+  const { staffRequirements, availability, employeeSkills } = context;
+
+  // Mapear asignaciones actuales para exclusión rápida
+  const assignedEmployeesByDate = new Set<string>();
+  for (const shift of currentRoster.roster) {
+    assignedEmployeesByDate.add(`${getDateString(shift.start)}:${shift.employeeId}`);
+  }
+
+  // Mapear turnos actuales por estación/día para contar
+  const shiftsPerStationDay = new Map<string, number>();
+  for (const shift of currentRoster.roster) {
+    const key = `${getDateString(shift.start)}:${shift.stationId || 'unknown'}`;
+    shiftsPerStationDay.set(key, (shiftsPerStationDay.get(key) || 0) + 1);
+  }
+
+  const days: string[] = [];
+  let d = new Date(roster.weekStart);
+  // roster.weekEnd no existe en el schema, calcular +6 días
+  const end = new Date(addHoursToIso(roster.weekStart, 24 * 6));
+  while (d <= end) {
+    days.push(d.toISOString().split('T')[0]);
+    d.setDate(d.getDate() + 1);
+  }
+
+  // Importar helpers de matching (duplicado técnico, idealmente compartido)
+  // Por ahora reimplementamos simplificado para no romper imports circulares complejos
+  const checkSkill = (empId: string, stationId: string, stationCode?: string) => {
+    const skills = employeeSkills.find(s => s.employeeId === empId);
+    if (!skills) return false;
+    return skills.skills.some(s =>
+      s.toUpperCase() === (stationCode || '').toUpperCase() ||
+      s.toUpperCase().includes((stationCode || '').toUpperCase())
+    );
+  };
+
+  // Importar constantes de turnos (SHIFTS) necesita import
+  // Usaremos los tiempos definidos en la disponibilidad directamente o hardcodeados por ahora si falla
+  // Mejor importar SHIFT_CODE_TIMES si es posible. 
+  // Nota: SHIFT_CODE_TIMES se importa arriba si agregamos el import (hacerlo en siguiente paso si falla).
+  // Asumiremos que availability tiene start/end si shiftCode falla, o usamos default.
+
+  for (const date of days) {
+    for (const req of staffRequirements) {
+      if (req.periodType !== 'NORMAL') continue; // Simplificación MVP
+
+      const key = `${date}:${req.stationId}`;
+      const currentCount = shiftsPerStationDay.get(key) || 0;
+
+      if (currentCount < req.requiredStaff) {
+        let needed = req.requiredStaff - currentCount;
+
+        // Buscar candidatos
+        const dateAvailabilities = availability.filter(a => a.date === date);
+
+        for (const avail of dateAvailabilities) {
+          if (needed <= 0) break;
+
+          // Check si ya trabaja
+          if (assignedEmployeesByDate.has(`${date}:${avail.employeeId}`)) continue;
+
+          // Check skills
+          const skilled = checkSkill(avail.employeeId, req.stationId, req.stationName || req.stationCode);
+          if (!skilled) {
+            // console.log(`DEBUG: Emp ${avail.employeeId} missing skill for ${req.stationName}`);
+            continue;
+          }
+
+          // Candidato encontrado! Construir turno
+          // Determinar horario
+          let start = `${date}T09:00:00`; // Default fallback
+          let end = `${date}T17:00:00`;
+
+          // Intentar usar horario de disponibilidad si existe
+          if (avail.startTime && avail.endTime) {
+            start = `${date}T${avail.startTime}`;
+            end = `${date}T${avail.endTime}`;
+          } else if (avail.shiftCode) {
+            // Aquí necesitaríamos SHIFT_CODE_TIMES.
+            // Para MVP, si availability viene de DB, debería tener start/end procesado o usamos lógica
+            // Si falta, hardcodeamos turno estándar 'General'
+          }
+
+          const newShift: Shift = {
+            employeeId: avail.employeeId,
+            start,
+            end,
+            stationId: req.stationId,
+            station: (req as any).stationCode || 'General', // Fallback name
+            shiftCode: avail.shiftCode || 'GEN',
+            isPeak: false
+          };
+
+          // Validar
+          const validation = await tryOptimizationWithValidation(
+            currentRoster,
+            currentRoster.roster.length, // Index ficticio (append)
+            { newStart: start }, // Hack: pasamos algo para triggerar logica, pero necesitamos manejar ADD
+            `Agregar turno para cubrir gap en ${req.stationId}`,
+            validator
+          );
+
+          // FIX: tryOptimizationWithValidation asume modificación de existente.
+          // Necesitamos una variante para ADD.
+          // O modificamos tryOptimizationWithValidation para aceptar index -1?
+
+          // Haremos la validación manual aquí para ADD
+          const tempRoster = JSON.parse(JSON.stringify(currentRoster));
+          tempRoster.roster.push(newShift);
+          const compliance = await validator(tempRoster);
+
+          const hasCritical = compliance.issues?.some(i => i.severity === 'CRITICAL');
+          const query: ValidationQuery = {
+            proposedChange: `Agregar turno para ${avail.employeeId} en ${req.stationId} (${date})`,
+            passed: !hasCritical,
+            reason: hasCritical ? compliance.issues?.map(i => i.issue).join(', ') : undefined
+          };
+          queries.push(query);
+
+          if (!hasCritical) {
+            currentRoster.roster.push(newShift);
+            assignedEmployeesByDate.add(`${date}:${avail.employeeId}`); // Marcar como ocupado
+            needed--;
+            addedShifts.push({
+              type: 'ADDED_SHIFT', // Nuevo tipo no oficial pero útil en appliedChanges
+              description: query.proposedChange,
+              shiftIndex: currentRoster.roster.length - 1,
+              employeeId: avail.employeeId,
+              costImpact: -1 // Costo aumenta, pero cobertura mejora
+            } as any);
+          }
+        }
+      }
+    }
+  }
+
+  return { roster: currentRoster, addedShifts, queries };
+}
+
 
 /**
  * Propone una optimización y la valida con ComplianceWorker antes de aplicar
@@ -538,9 +717,18 @@ BENEFICIOS:
                 workingRoster.roster = workingRoster.roster.filter((s: any) => !s.__toRemove);
               }
 
+              // --- PASO 1.5: Resolver Gaps de Cobertura ---
+              // Antes de optimizar costos, aseguramos la cobertura
+              const gapResolution = await resolveCoverageGaps(workingRoster, validator);
+              workingRoster = gapResolution.roster;
+              appliedChanges.push(...gapResolution.addedShifts);
+              validationQueries.push(...gapResolution.queries);
+
+              // Variable para contar optimizaciones de costo más adelante
+              let additionalOptimizations = 0;
+
               // --- PASO 2: Optimizaciones adicionales con validación ---
               // Cada cambio se valida con ComplianceWorker antes de aplicar
-              let additionalOptimizations = 0;
 
               const opportunities = findCostOptimizationOpportunities(workingRoster, penaltyRules);
 

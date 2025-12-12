@@ -91,8 +91,8 @@ export const employeeTools = {
         return EmployeeContractSchema.parse({
           employeeId: emp.id,
           employmentType: emp.employmentType as z.infer<typeof EmploymentTypeEnum>,
-          maxHoursWeek: hoursRule?.maxHoursWeek ?? null,
-          minHoursBetweenShifts: policy?.minHoursBetweenShifts ?? null,
+          maxHoursWeek: hoursRule?.maxHoursWeek ? Number(hoursRule.maxHoursWeek) : null,
+          minHoursBetweenShifts: policy?.minHoursBetweenShifts ? Number(policy.minHoursBetweenShifts) : null,
           baseRate: null,
         });
       });
@@ -116,23 +116,31 @@ export const employeeTools = {
       const records = await availabilityRepo.find({
         where: {
           store: { id: resolvedStoreId },
-          employee: { id: In(employeeIds) },
+          employee: employeeIds.length > 0 ? { id: In(employeeIds) } : undefined,
           date: Between(new Date(startDate), new Date(endDate)),
         },
         relations: ['shiftCode', 'station', 'employee', 'store'],
       });
 
-      return records.map((rec) =>
-        EmployeeAvailabilitySchema.parse({
+      return records.map((rec) => {
+        let d: Date;
+        try {
+          d = new Date(rec.date);
+          if (isNaN(d.getTime())) throw new Error('Invalid Date');
+        } catch {
+          d = new Date(); // Fallback
+        }
+
+        return EmployeeAvailabilitySchema.parse({
           employeeId: rec.employee.id,
           storeId: rec.store?.id,
-          date: rec.date.toISOString().split('T')[0],
+          date: d.toISOString().split('T')[0],
           startTime: rec.shiftCode?.startTime ?? null,
           endTime: rec.shiftCode?.endTime ?? null,
           shiftCode: rec.shiftCode?.code ?? null,
           stationId: rec.station?.id ?? null,
-        }),
-      );
+        });
+      });
     },
   },
 
