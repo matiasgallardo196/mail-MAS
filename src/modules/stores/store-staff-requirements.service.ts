@@ -19,25 +19,25 @@ export class StoreStaffRequirementsService {
   ) {}
 
   async create(createRequirementDto: CreateStoreStaffRequirementDto): Promise<StoreStaffRequirement> {
-    // Verificar que la tienda existe
+    // Verify store exists
     const store = await this.storeRepository.findOne({
       where: { id: createRequirementDto.storeId, isActive: true },
     });
 
     if (!store) {
-      throw new NotFoundException(`Tienda con ID "${createRequirementDto.storeId}" no encontrada`);
+      throw new NotFoundException(`Store with ID "${createRequirementDto.storeId}" not found`);
     }
 
-    // Verificar que la estación existe
+    // Verify station exists
     const station = await this.stationRepository.findOne({
       where: { id: createRequirementDto.stationId, isActive: true },
     });
 
     if (!station) {
-      throw new NotFoundException(`Estación con ID "${createRequirementDto.stationId}" no encontrada`);
+      throw new NotFoundException(`Station with ID "${createRequirementDto.stationId}" not found`);
     }
 
-    // Verificar si la combinación ya existe
+    // Check if combination already exists
     const existingRequirement = await this.requirementRepository.findOne({
       where: {
         store: { id: createRequirementDto.storeId },
@@ -48,7 +48,7 @@ export class StoreStaffRequirementsService {
 
     if (existingRequirement) {
       throw new ConflictException(
-        'Ya existe un requisito de personal para esta combinación de tienda, período y estación',
+        'A staff requirement already exists for this store, period and station combination',
       );
     }
 
@@ -76,7 +76,7 @@ export class StoreStaffRequirementsService {
     });
 
     if (!requirement) {
-      throw new NotFoundException(`Requisito de personal con ID "${id}" no encontrado`);
+      throw new NotFoundException(`Staff requirement with ID "${id}" not found`);
     }
 
     return requirement;
@@ -85,29 +85,29 @@ export class StoreStaffRequirementsService {
   async update(id: string, updateRequirementDto: UpdateStoreStaffRequirementDto): Promise<StoreStaffRequirement> {
     const requirement = await this.findOne(id);
 
-    // Verificar tienda si se actualiza
+    // Verify store if updating
     if (updateRequirementDto.storeId) {
       const store = await this.storeRepository.findOne({
         where: { id: updateRequirementDto.storeId, isActive: true },
       });
 
       if (!store) {
-        throw new NotFoundException(`Tienda con ID "${updateRequirementDto.storeId}" no encontrada`);
+        throw new NotFoundException(`Store with ID "${updateRequirementDto.storeId}" not found`);
       }
     }
 
-    // Verificar estación si se actualiza
+    // Verify station if updating
     if (updateRequirementDto.stationId) {
       const station = await this.stationRepository.findOne({
         where: { id: updateRequirementDto.stationId, isActive: true },
       });
 
       if (!station) {
-        throw new NotFoundException(`Estación con ID "${updateRequirementDto.stationId}" no encontrada`);
+        throw new NotFoundException(`Station with ID "${updateRequirementDto.stationId}" not found`);
       }
     }
 
-    // Verificar unicidad si se actualizan los campos únicos
+    // Check uniqueness if updating unique fields
     if (updateRequirementDto.storeId || updateRequirementDto.periodType || updateRequirementDto.stationId) {
       const storeId = updateRequirementDto.storeId || requirement.store.id;
       const periodType = updateRequirementDto.periodType || requirement.periodType;
@@ -123,7 +123,7 @@ export class StoreStaffRequirementsService {
 
       if (existingRequirement && existingRequirement.id !== id) {
         throw new ConflictException(
-          'Ya existe un requisito de personal para esta combinación de tienda, período y estación',
+          'A staff requirement already exists for this store, period and station combination',
         );
       }
     }

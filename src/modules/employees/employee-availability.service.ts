@@ -28,56 +28,56 @@ export class EmployeeAvailabilityService {
   ) {}
 
   async create(createAvailabilityDto: CreateEmployeeAvailabilityDto): Promise<EmployeeAvailability> {
-    // Verificar que el empleado existe
+    // Verify employee exists
     const employee = await this.employeeRepository.findOne({
       where: { id: createAvailabilityDto.employeeId, isActive: true },
     });
 
     if (!employee) {
-      throw new NotFoundException(`Empleado con ID "${createAvailabilityDto.employeeId}" no encontrado`);
+      throw new NotFoundException(`Employee with ID "${createAvailabilityDto.employeeId}" not found`);
     }
 
-    // Verificar que el período existe
+    // Verify schedule period exists
     const schedulePeriod = await this.schedulePeriodRepository.findOne({
       where: { id: createAvailabilityDto.schedulePeriodId, isActive: true },
     });
 
     if (!schedulePeriod) {
       throw new NotFoundException(
-        `Período de programación con ID "${createAvailabilityDto.schedulePeriodId}" no encontrado`,
+        `Schedule period with ID "${createAvailabilityDto.schedulePeriodId}" not found`,
       );
     }
 
-    // Verificar que la tienda existe
+    // Verify store exists
     const store = await this.storeRepository.findOne({
       where: { id: createAvailabilityDto.storeId, isActive: true },
     });
 
     if (!store) {
-      throw new NotFoundException(`Tienda con ID "${createAvailabilityDto.storeId}" no encontrada`);
+      throw new NotFoundException(`Store with ID "${createAvailabilityDto.storeId}" not found`);
     }
 
-    // Verificar que el código de turno existe
+    // Verify shift code exists
     const shiftCode = await this.shiftCodeRepository.findOne({
       where: { id: createAvailabilityDto.shiftCodeId, isActive: true },
     });
 
     if (!shiftCode) {
-      throw new NotFoundException(`Código de turno con ID "${createAvailabilityDto.shiftCodeId}" no encontrado`);
+      throw new NotFoundException(`Shift code with ID "${createAvailabilityDto.shiftCodeId}" not found`);
     }
 
-    // Verificar que la estación existe si se proporciona
+    // Verify station exists if provided
     if (createAvailabilityDto.stationId) {
       const station = await this.stationRepository.findOne({
         where: { id: createAvailabilityDto.stationId, isActive: true },
       });
 
       if (!station) {
-        throw new NotFoundException(`Estación con ID "${createAvailabilityDto.stationId}" no encontrada`);
+        throw new NotFoundException(`Station with ID "${createAvailabilityDto.stationId}" not found`);
       }
     }
 
-    // Verificar unicidad (employee, schedulePeriod, date)
+    // Check uniqueness (employee, schedulePeriod, date)
     const existingAvailability = await this.availabilityRepository.findOne({
       where: {
         employee: { id: createAvailabilityDto.employeeId },
@@ -87,7 +87,7 @@ export class EmployeeAvailabilityService {
     });
 
     if (existingAvailability) {
-      throw new ConflictException('Ya existe una disponibilidad para este empleado, período y fecha');
+      throw new ConflictException('An availability already exists for this employee, period and date');
     }
 
     const availability = this.availabilityRepository.create({
@@ -118,7 +118,7 @@ export class EmployeeAvailabilityService {
     });
 
     if (!availability) {
-      throw new NotFoundException(`Disponibilidad con ID "${id}" no encontrada`);
+      throw new NotFoundException(`Availability with ID "${id}" not found`);
     }
 
     return availability;
@@ -127,14 +127,14 @@ export class EmployeeAvailabilityService {
   async update(id: string, updateAvailabilityDto: UpdateEmployeeAvailabilityDto): Promise<EmployeeAvailability> {
     const availability = await this.findOne(id);
 
-    // Verificar relaciones si se actualizan
+    // Verify relationships if updating
     if (updateAvailabilityDto.employeeId) {
       const employee = await this.employeeRepository.findOne({
         where: { id: updateAvailabilityDto.employeeId, isActive: true },
       });
 
       if (!employee) {
-        throw new NotFoundException(`Empleado con ID "${updateAvailabilityDto.employeeId}" no encontrado`);
+        throw new NotFoundException(`Employee with ID "${updateAvailabilityDto.employeeId}" not found`);
       }
     }
 
@@ -145,7 +145,7 @@ export class EmployeeAvailabilityService {
 
       if (!schedulePeriod) {
         throw new NotFoundException(
-          `Período de programación con ID "${updateAvailabilityDto.schedulePeriodId}" no encontrado`,
+          `Schedule period with ID "${updateAvailabilityDto.schedulePeriodId}" not found`,
         );
       }
     }
@@ -156,7 +156,7 @@ export class EmployeeAvailabilityService {
       });
 
       if (!store) {
-        throw new NotFoundException(`Tienda con ID "${updateAvailabilityDto.storeId}" no encontrada`);
+        throw new NotFoundException(`Store with ID "${updateAvailabilityDto.storeId}" not found`);
       }
     }
 
@@ -166,7 +166,7 @@ export class EmployeeAvailabilityService {
       });
 
       if (!shiftCode) {
-        throw new NotFoundException(`Código de turno con ID "${updateAvailabilityDto.shiftCodeId}" no encontrado`);
+        throw new NotFoundException(`Shift code with ID "${updateAvailabilityDto.shiftCodeId}" not found`);
       }
     }
 
@@ -177,12 +177,12 @@ export class EmployeeAvailabilityService {
         });
 
         if (!station) {
-          throw new NotFoundException(`Estación con ID "${updateAvailabilityDto.stationId}" no encontrada`);
+          throw new NotFoundException(`Station with ID "${updateAvailabilityDto.stationId}" not found`);
         }
       }
     }
 
-    // Verificar unicidad si se actualizan los campos únicos
+    // Check uniqueness if updating unique fields
     if (updateAvailabilityDto.employeeId || updateAvailabilityDto.schedulePeriodId || updateAvailabilityDto.date) {
       const employeeId = updateAvailabilityDto.employeeId || availability.employee.id;
       const schedulePeriodId = updateAvailabilityDto.schedulePeriodId || availability.schedulePeriod.id;
@@ -197,7 +197,7 @@ export class EmployeeAvailabilityService {
       });
 
       if (existingAvailability && existingAvailability.id !== id) {
-        throw new ConflictException('Ya existe una disponibilidad para este empleado, período y fecha');
+        throw new ConflictException('An availability already exists for this employee, period and date');
       }
     }
 

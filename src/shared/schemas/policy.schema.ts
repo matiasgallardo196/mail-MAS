@@ -18,8 +18,8 @@ export const EmploymentTypeRuleSchema = z.object({
   maxHoursWeek: z.number().nullable().optional(),
 });
 
-// PenaltyRule schema - ÚNICA fuente de verdad para penalty rules
-// Compatible con fairwork.tools.ts y compliance.worker.ts
+// PenaltyRule schema - SINGLE source of truth for penalty rules
+// Compatible with fairwork.tools.ts and compliance.worker.ts
 export const PenaltyRuleSchema = z.object({
   id: z.string(),
   dayOfWeek: z.number().nullable(), // 0=Sunday, 6=Saturday

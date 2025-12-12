@@ -19,32 +19,32 @@ export class EmployeesService {
   ) {}
 
   async create(createEmployeeDto: CreateEmployeeDto): Promise<Employee> {
-    // Verificar si el código externo ya existe
+    // Check if external code already exists
     const existingEmployee = await this.employeeRepository.findOne({
       where: { externalCode: createEmployeeDto.externalCode },
     });
 
     if (existingEmployee) {
-      throw new ConflictException(`El empleado con código externo "${createEmployeeDto.externalCode}" ya existe`);
+      throw new ConflictException(`Employee with external code "${createEmployeeDto.externalCode}" already exists`);
     }
 
-    // Verificar que la tienda existe
+    // Verify store exists
     const store = await this.storeRepository.findOne({
       where: { id: createEmployeeDto.defaultStoreId, isActive: true },
     });
 
     if (!store) {
-      throw new NotFoundException(`Tienda con ID "${createEmployeeDto.defaultStoreId}" no encontrada`);
+      throw new NotFoundException(`Store with ID "${createEmployeeDto.defaultStoreId}" not found`);
     }
 
-    // Verificar que la estación existe si se proporciona
+    // Verify station exists if provided
     if (createEmployeeDto.defaultStationId) {
       const station = await this.stationRepository.findOne({
         where: { id: createEmployeeDto.defaultStationId, isActive: true },
       });
 
       if (!station) {
-        throw new NotFoundException(`Estación con ID "${createEmployeeDto.defaultStationId}" no encontrada`);
+        throw new NotFoundException(`Station with ID "${createEmployeeDto.defaultStationId}" not found`);
       }
     }
 
@@ -78,7 +78,7 @@ export class EmployeesService {
     });
 
     if (!employee) {
-      throw new NotFoundException(`Empleado con ID "${id}" no encontrado`);
+      throw new NotFoundException(`Employee with ID "${id}" not found`);
     }
 
     return employee;
@@ -87,29 +87,29 @@ export class EmployeesService {
   async update(id: string, updateEmployeeDto: UpdateEmployeeDto): Promise<Employee> {
     const employee = await this.findOne(id);
 
-    // Si se está actualizando el código externo, verificar que no exista otro
+    // If updating external code, verify no other employee has it
     if (updateEmployeeDto.externalCode && updateEmployeeDto.externalCode !== employee.externalCode) {
       const existingEmployee = await this.employeeRepository.findOne({
         where: { externalCode: updateEmployeeDto.externalCode },
       });
 
       if (existingEmployee) {
-        throw new ConflictException(`El empleado con código externo "${updateEmployeeDto.externalCode}" ya existe`);
+        throw new ConflictException(`Employee with external code "${updateEmployeeDto.externalCode}" already exists`);
       }
     }
 
-    // Verificar tienda si se actualiza
+    // Verify store if updating
     if (updateEmployeeDto.defaultStoreId) {
       const store = await this.storeRepository.findOne({
         where: { id: updateEmployeeDto.defaultStoreId, isActive: true },
       });
 
       if (!store) {
-        throw new NotFoundException(`Tienda con ID "${updateEmployeeDto.defaultStoreId}" no encontrada`);
+        throw new NotFoundException(`Store with ID "${updateEmployeeDto.defaultStoreId}" not found`);
       }
     }
 
-    // Verificar estación si se actualiza
+    // Verify station if updating
     if (updateEmployeeDto.defaultStationId !== undefined) {
       if (updateEmployeeDto.defaultStationId) {
         const station = await this.stationRepository.findOne({
@@ -117,7 +117,7 @@ export class EmployeesService {
         });
 
         if (!station) {
-          throw new NotFoundException(`Estación con ID "${updateEmployeeDto.defaultStationId}" no encontrada`);
+          throw new NotFoundException(`Station with ID "${updateEmployeeDto.defaultStationId}" not found`);
         }
       }
     }

@@ -11,43 +11,43 @@ export class StoreStationsController {
   constructor(private readonly storeStationsService: StoreStationsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear una nueva relación Store-Station' })
-  @ApiResponse({ status: 201, description: 'Relación creada exitosamente', type: StoreStation })
-  @ApiResponse({ status: 404, description: 'Tienda o estación no encontrada' })
-  @ApiResponse({ status: 409, description: 'La relación ya existe' })
+  @ApiOperation({ summary: 'Create a new Store-Station relationship' })
+  @ApiResponse({ status: 201, description: 'Relationship created successfully', type: StoreStation })
+  @ApiResponse({ status: 404, description: 'Store or station not found' })
+  @ApiResponse({ status: 409, description: 'Relationship already exists' })
   create(@Body() createStoreStationDto: CreateStoreStationDto): Promise<StoreStation> {
     return this.storeStationsService.create(createStoreStationDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtener todas las relaciones Store-Station activas' })
-  @ApiResponse({ status: 200, description: 'Lista de relaciones', type: [StoreStation] })
+  @ApiOperation({ summary: 'Get all active Store-Station relationships' })
+  @ApiResponse({ status: 200, description: 'List of relationships', type: [StoreStation] })
   findAll(): Promise<StoreStation[]> {
     return this.storeStationsService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener una relación Store-Station por ID' })
-  @ApiResponse({ status: 200, description: 'Relación encontrada', type: StoreStation })
-  @ApiResponse({ status: 404, description: 'Relación no encontrada' })
+  @ApiOperation({ summary: 'Get a Store-Station relationship by ID' })
+  @ApiResponse({ status: 200, description: 'Relationship found', type: StoreStation })
+  @ApiResponse({ status: 404, description: 'Relationship not found' })
   findOne(@Param('id') id: string): Promise<StoreStation> {
     return this.storeStationsService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar una relación Store-Station' })
-  @ApiResponse({ status: 200, description: 'Relación actualizada exitosamente', type: StoreStation })
-  @ApiResponse({ status: 404, description: 'Relación, tienda o estación no encontrada' })
-  @ApiResponse({ status: 409, description: 'La nueva relación ya existe' })
+  @ApiOperation({ summary: 'Update a Store-Station relationship' })
+  @ApiResponse({ status: 200, description: 'Relationship updated successfully', type: StoreStation })
+  @ApiResponse({ status: 404, description: 'Relationship, store or station not found' })
+  @ApiResponse({ status: 409, description: 'New relationship already exists' })
   update(@Param('id') id: string, @Body() updateStoreStationDto: UpdateStoreStationDto): Promise<StoreStation> {
     return this.storeStationsService.update(id, updateStoreStationDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar una relación Store-Station (soft delete)' })
-  @ApiResponse({ status: 204, description: 'Relación eliminada exitosamente' })
-  @ApiResponse({ status: 404, description: 'Relación no encontrada' })
+  @ApiOperation({ summary: 'Delete a Store-Station relationship (soft delete)' })
+  @ApiResponse({ status: 204, description: 'Relationship deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Relationship not found' })
   remove(@Param('id') id: string): Promise<void> {
     return this.storeStationsService.remove(id);
   }

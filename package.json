@@ -1,7 +1,7 @@
 {
-  "name": "boiler-plate-nest-js",
-  "version": "0.0.1",
-  "description": "",
+  "name": "mcdworkforce-scheduling-mas",
+  "version": "1.0.0",
+  "description": "McDonald's Workforce Scheduling Multi-Agent System",
   "author": "",
   "private": true,
   "license": "UNLICENSED",

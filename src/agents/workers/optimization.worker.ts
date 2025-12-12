@@ -42,13 +42,13 @@ const WorkerBase = class {
 // --- Types for agent collaboration ---
 
 /**
- * Función validadora que el Orchestrator inyecta
- * Permite a OptimizationWorker consultar a ComplianceWorker sin duplicar lógica
+ * Validator function that the Orchestrator injects
+ * Allows OptimizationWorker to query ComplianceWorker without duplicating logic
  */
 export type ComplianceValidator = (roster: Roster) => Promise<ComplianceResult>;
 
 /**
- * Registro de una consulta al ComplianceWorker
+ * Record of a ComplianceWorker query
  */
 export interface ValidationQuery {
   proposedChange: string;
@@ -57,7 +57,7 @@ export interface ValidationQuery {
 }
 
 /**
- * Input extendido que incluye el validador
+ * Extended input that includes the validator
  */
 export interface OptimizationInputWithValidator {
   roster: Roster;
@@ -73,12 +73,12 @@ export interface OptimizationInputWithValidator {
     maxHoursPerWeek?: Record<string, number>;
   };
   penaltyRules?: PenaltyRule[];
-  // Función validadora inyectada por el Orchestrator
+  // Validator function injected by the Orchestrator
   complianceValidator?: ComplianceValidator;
 }
 
 /**
- * Resultado extendido con queries de validación
+ * Extended result with validation queries
  */
 export interface OptimizationResultWithQueries extends OptimizationResult {
   validationQueries: ValidationQuery[];
@@ -89,7 +89,7 @@ export interface OptimizationResultWithQueries extends OptimizationResult {
 // - hoursBetween, addHoursToIso, getDayOfWeek, getTimeString, getDateString
 
 /**
- * Calcula el costo relativo de un turno basado en su duración y multiplier de penalty
+ * Calculates the relative cost of a shift based on its duration and penalty multiplier
  */
 async function calculateShiftRelativeCost(
   shift: Shift,
@@ -127,7 +127,7 @@ async function calculateShiftRelativeCost(
 }
 
 /**
- * Calcula el costo relativo total del roster
+ * Calculates the total relative cost of the roster
  */
 async function calculateRosterRelativeCost(
   roster: Roster,
@@ -143,8 +143,8 @@ async function calculateRosterRelativeCost(
 }
 
 /**
- * Aplica una sugerencia de ComplianceWorker al roster
- * Las sugerencias de compliance ya fueron validadas, se aplican directamente
+ * Applies a ComplianceWorker suggestion to the roster
+ * Compliance suggestions have already been validated, they are applied directly
  */
 function applySuggestion(
   roster: Roster,
@@ -154,7 +154,7 @@ function applySuggestion(
   const shiftIndex = suggestion.shiftIndex;
 
   if (shiftIndex === undefined || shiftIndex < 0 || shiftIndex >= shifts.length) {
-    return { applied: false, description: `Índice de turno inválido: ${shiftIndex}` };
+    return { applied: false, description: `Invalid shift index: ${shiftIndex}` };
   }
 
   const shift = shifts[shiftIndex];
@@ -166,7 +166,7 @@ function applySuggestion(
         shift.end = change.newEnd;
         return {
           applied: true,
-          description: `Extendido turno de ${suggestion.employeeId} hasta ${change.newEnd}`,
+          description: `Extended shift for ${suggestion.employeeId} until ${change.newEnd}`,
         };
       }
       break;
@@ -176,7 +176,7 @@ function applySuggestion(
         shift.end = change.newEnd;
         return {
           applied: true,
-          description: `Acortado turno de ${suggestion.employeeId} hasta ${change.newEnd}`,
+          description: `Shortened shift for ${suggestion.employeeId} until ${change.newEnd}`,
         };
       }
       break;
@@ -187,7 +187,7 @@ function applySuggestion(
         shift.end = change.newEnd;
         return {
           applied: true,
-          description: `Movido turno de ${suggestion.employeeId} a ${change.newStart}`,
+          description: `Moved shift for ${suggestion.employeeId} to ${change.newStart}`,
         };
       }
       break;
@@ -197,7 +197,7 @@ function applySuggestion(
         shift.employeeId = change.newEmployeeId;
         return {
           applied: true,
-          description: `Reasignado turno a empleado ${change.newEmployeeId}`,
+          description: `Reassigned shift to employee ${change.newEmployeeId}`,
         };
       }
       break;
@@ -206,22 +206,22 @@ function applySuggestion(
       (shift as any).__toRemove = true;
       return {
         applied: true,
-        description: `Marcado para eliminar turno de ${suggestion.employeeId}`,
+        description: `Marked for removal shift of ${suggestion.employeeId}`,
       };
 
     case 'ADD_REST_DAY':
       return {
         applied: false,
-        description: `Sugerencia de agregar día de descanso para ${suggestion.employeeId}`,
+        description: `Suggestion to add rest day for ${suggestion.employeeId}`,
       };
   }
 
-  return { applied: false, description: `No se pudo aplicar sugerencia: ${suggestion.type}` };
+  return { applied: false, description: `Could not apply suggestion: ${suggestion.type}` };
 }
 
 /**
- * Propone una optimización y la valida con ComplianceWorker antes de aplicar
- * Esta es la función clave que implementa la colaboración entre agents
+ * Proposes an optimization and validates it with ComplianceWorker before applying
+ * This is the key function that implements collaboration between agents
  */
 async function tryOptimizationWithValidation(
   currentRoster: Roster,
@@ -234,7 +234,7 @@ async function tryOptimizationWithValidation(
   roster: Roster;
   query: ValidationQuery;
 }> {
-  // 1. Crear copia del roster con el cambio propuesto
+  // 1. Create copy of roster with proposed change
   const tempRoster: Roster = JSON.parse(JSON.stringify(currentRoster));
   const shift = tempRoster.roster[shiftIndex];
 
@@ -245,20 +245,20 @@ async function tryOptimizationWithValidation(
       query: {
         proposedChange: changeDescription,
         passed: false,
-        reason: 'Shift index inválido',
+        reason: 'Invalid shift index',
       },
     };
   }
 
-  // Aplicar cambio propuesto
+  // Apply proposed change
   if (proposedChange.newStart) shift.start = proposedChange.newStart;
   if (proposedChange.newEnd) shift.end = proposedChange.newEnd;
   if (proposedChange.newEmployeeId) shift.employeeId = proposedChange.newEmployeeId;
 
-  // 2. Consultar a ComplianceWorker (DRY - usa la misma lógica)
+  // 2. Query ComplianceWorker (DRY - uses the same logic)
   const compliance = await validator(tempRoster);
 
-  // 3. Verificar si pasa
+  // 3. Check if it passes
   const hasCritical = compliance.issues?.some((i) => i.severity === 'CRITICAL');
 
   if (!hasCritical) {
@@ -272,7 +272,7 @@ async function tryOptimizationWithValidation(
     };
   }
 
-  // 4. No pasa - devolver roster original
+  // 4. Does not pass - return original roster
   const criticalIssues = compliance.issues?.filter((i) => i.severity === 'CRITICAL') ?? [];
   return {
     applied: false,
@@ -286,7 +286,7 @@ async function tryOptimizationWithValidation(
 }
 
 /**
- * Identifica oportunidades de optimización por costo
+ * Identifies cost optimization opportunities
  */
 function findCostOptimizationOpportunities(
   roster: Roster,
@@ -308,40 +308,40 @@ function findCostOptimizationOpportunities(
     const shift = roster.roster[i];
     const dayOfWeek = getDayOfWeek(shift.start);
 
-    // Oportunidad: Turno en domingo (multiplier alto) podría moverse a sábado
+    // Opportunity: Sunday shift (high multiplier) could move to Saturday
     if (dayOfWeek === 0) {
-      // Mover 1 día antes (sábado)
+      // Move 1 day earlier (Saturday)
       const newStart = addHoursToIso(shift.start, -24);
       const newEnd = addHoursToIso(shift.end, -24);
 
       opportunities.push({
         shiftIndex: i,
-        description: `Mover turno de ${shift.employeeId} de domingo a sábado`,
+        description: `Move shift of ${shift.employeeId} from Sunday to Saturday`,
         proposedChange: { newStart, newEnd },
-        estimatedSavings: 0.25, // Diferencia entre 1.5 y 1.25 multiplier
+        estimatedSavings: 0.25, // Difference between 1.5 and 1.25 multiplier
       });
     }
 
-    // Oportunidad: Turno en sábado podría moverse a viernes
+    // Opportunity: Saturday shift could move to Friday
     if (dayOfWeek === 6) {
       const newStart = addHoursToIso(shift.start, -24);
       const newEnd = addHoursToIso(shift.end, -24);
 
       opportunities.push({
         shiftIndex: i,
-        description: `Mover turno de ${shift.employeeId} de sábado a viernes`,
+        description: `Move shift of ${shift.employeeId} from Saturday to Friday`,
         proposedChange: { newStart, newEnd },
         estimatedSavings: 0.25,
       });
     }
   }
 
-  // Ordenar por mayor ahorro potencial
+  // Sort by highest potential savings
   return opportunities.sort((a, b) => b.estimatedSavings - a.estimatedSavings);
 }
 
 /**
- * Balancea las horas entre empleados para distribución más equitativa
+ * Balances hours between employees for more equitable distribution
  */
 function analyzeHoursBalance(roster: Roster): {
   imbalanced: boolean;
@@ -367,7 +367,7 @@ function analyzeHoursBalance(roster: Roster): {
   if (variance > 10) {
     return {
       imbalanced: true,
-      details: `Desbalance de ${variance.toFixed(1)}h entre empleados (max: ${maxHours.toFixed(1)}h, min: ${minHours.toFixed(1)}h)`,
+      details: `Imbalance of ${variance.toFixed(1)}h between employees (max: ${maxHours.toFixed(1)}h, min: ${minHours.toFixed(1)}h)`,
       employeeHours: hoursByEmployee,
     };
   }
@@ -376,73 +376,73 @@ function analyzeHoursBalance(roster: Roster): {
 }
 
 /**
- * Calcula el score de optimización (0-100)
+ * Calculates the optimization score (0-100)
  *
- * FÓRMULA DE CÁLCULO:
+ * CALCULATION FORMULA:
  * ==================
- * Score Base: 50 puntos
+ * Base Score: 50 points
  *
- * BONIFICACIONES:
- * - Ahorro de costos:         +2 puntos por cada 1% de ahorro (máx +30)
- *                             Ejemplo: 15% ahorro = +30 puntos
- * - Sugerencias aplicadas:    +5 puntos por cada sugerencia (máx +15)
- *                             Ejemplo: 3 sugerencias = +15 puntos
- * - Optimizaciones exitosas:  +3 puntos por cada validación que pasó (máx +10)
- *                             Ejemplo: 3 optimizaciones = +9 puntos
- * - Balance de horas:         +5 puntos si las horas están balanceadas
+ * BONUSES:
+ * - Cost savings:              +2 points per 1% savings (max +30)
+ *                              Example: 15% savings = +30 points
+ * - Suggestions applied:       +5 points per suggestion (max +15)
+ *                              Example: 3 suggestions = +15 points
+ * - Successful optimizations:  +3 points per validation passed (max +10)
+ *                              Example: 3 optimizations = +9 points
+ * - Hours balance:             +5 points if hours are balanced
  *
- * PENALIZACIONES:
- * - Sin mejoras:              -10 puntos si no se modificó ni aplicó nada
+ * PENALTIES:
+ * - No improvements:           -10 points if nothing was modified or applied
  *
- * RANGO FINAL: 0-100 (clamped)
+ * FINAL RANGE: 0-100 (clamped)
  *
- * INTERPRETACIÓN:
- * - 0-40:   Optimización fallida o sin mejoras
- * - 41-60:  Optimización básica (solo suggestions)
- * - 61-80:  Buena optimización (suggestions + ahorro)
- * - 81-100: Optimización excelente (ahorro significativo + balance)
+ * INTERPRETATION:
+ * - 0-40:   Failed or no improvements optimization
+ * - 41-60:  Basic optimization (suggestions only)
+ * - 61-80:  Good optimization (suggestions + savings)
+ * - 81-100: Excellent optimization (significant savings + balance)
  */
 function calculateOptimizationScore(
   metrics: OptimizationMetrics,
   hoursBalance: { imbalanced: boolean },
   validationQueries: ValidationQuery[],
 ): number {
-  // Score base: punto de partida neutral
+  // Base score: neutral starting point
   let score = 50;
 
-  // Bonus por ahorro de costos (hasta +30 puntos)
-  // 2 puntos por cada 1% de ahorro
+  // Bonus for cost savings (up to +30 points)
+  // 2 points per 1% savings
   if (metrics.savingsPercent > 0) {
     score += Math.min(30, metrics.savingsPercent * 2);
   }
 
-  // Bonus por aplicar sugerencias de compliance (hasta +15 puntos)
-  // 5 puntos por cada sugerencia aplicada exitosamente
+  // Bonus for applying compliance suggestions (up to +15 points)
+  // 5 points per successfully applied suggestion
   score += Math.min(15, metrics.suggestionsApplied * 5);
 
-  // Bonus por optimizaciones adicionales validadas (hasta +10 puntos)
-  // 3 puntos por cada optimización que pasó validación de ComplianceWorker
+  // Bonus for validated additional optimizations (up to +10 points)
+  // 3 points per optimization that passed ComplianceWorker validation
   const successfulOptimizations = validationQueries.filter((q) => q.passed).length;
   score += Math.min(10, successfulOptimizations * 3);
 
-  // Bonus por balance de horas entre empleados (+5 puntos)
+  // Bonus for balanced hours between employees (+5 points)
   if (!hoursBalance.imbalanced) {
     score += 5;
   }
 
-  // Penalización si no hubo ninguna mejora (-10 puntos)
+  // Penalty if no improvements were made (-10 points)
   if (metrics.shiftsModified === 0 && metrics.suggestionsApplied === 0) {
     score -= 10;
   }
 
-  // Clamp al rango 0-100
+  // Clamp to 0-100 range
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 /**
- * Validador por defecto que siempre pasa
- * En producción, el Orchestrator SIEMPRE debe proporcionar un validador real
- * Este fallback solo se usa para tests aislados
+ * Default validator that always passes
+ * In production, the Orchestrator MUST always provide a real validator
+ * This fallback is only used for isolated tests
  */
 function createPassthroughValidator(): ComplianceValidator {
   return async (): Promise<ComplianceResult> => {
@@ -456,63 +456,63 @@ export class OptimizationWorker extends WorkerBase {
   constructor() {
     super({
       name: 'OptimizationWorker',
-      instructions: `Optimiza roster para minimizar costos y equilibrar carga de trabajo.
+      instructions: `Optimizes roster to minimize costs and balance workload.
       
-RESPONSABILIDADES:
-1. Aplicar sugerencias de ComplianceWorker para resolver violaciones
-2. Proponer optimizaciones de costo y VALIDARLAS con ComplianceWorker antes de aplicar
-3. Balancear horas entre empleados
-4. Calcular costo relativo y reportar métricas
+RESPONSIBILITIES:
+1. Apply ComplianceWorker suggestions to resolve violations
+2. Propose cost optimizations and VALIDATE them with ComplianceWorker before applying
+3. Balance hours between employees
+4. Calculate relative cost and report metrics
 
-PROTOCOLO DE COLABORACIÓN (DRY):
-- Recibe feedback de ComplianceWorker con issues y suggestions
-- Aplica primero las suggestions (ya validadas por ComplianceWorker)
-- Para cada optimización adicional:
-  → Propone cambio
-  → CONSULTA a ComplianceWorker para validar
-  → Si pasa → aplica el cambio
-  → Si falla → descarta y prueba otra optimización
-- Devuelve roster optimizado + métricas + trace de consultas
+COLLABORATION PROTOCOL (DRY):
+- Receives feedback from ComplianceWorker with issues and suggestions
+- Applies suggestions first (already validated by ComplianceWorker)
+- For each additional optimization:
+  → Proposes change
+  → QUERIES ComplianceWorker to validate
+  → If passes → applies the change
+  → If fails → discards and tries another optimization
+- Returns optimized roster + metrics + query trace
 
-BENEFICIOS:
-- ComplianceWorker es ÚNICA fuente de verdad (DRY)
-- Cada cambio validado ANTES de aplicar (robusto)
-- Trace de consultas muestra colaboración real entre agents`,
+BENEFITS:
+- ComplianceWorker is SINGLE source of truth (DRY)
+- Each change validated BEFORE applying (robust)
+- Query trace shows real collaboration between agents`,
       tools: [
         {
           type: 'function',
           function: {
             name: 'optimize_roster',
             description:
-              'Optimiza un roster consultando a ComplianceWorker para validar cada cambio. Devuelve roster optimizado con trace de colaboración.',
+              'Optimizes a roster by querying ComplianceWorker to validate each change. Returns optimized roster with collaboration trace.',
             parameters: OptimizationInputSchema,
             execute: async (args: unknown): Promise<OptimizationResultWithQueries> => {
               const input = OptimizationInputSchema.parse(args) as OptimizationInputWithValidator;
               const appliedChanges: AppliedOptimization[] = [];
               const validationQueries: ValidationQuery[] = [];
 
-              // Deep clone del roster
+              // Deep clone of roster
               let workingRoster: Roster = JSON.parse(JSON.stringify(input.roster));
 
-              // Obtener validador (el Orchestrator debe proporcionar uno real)
-              // Si no hay validador, usamos passthrough (solo para tests aislados)
+              // Get validator (Orchestrator should provide a real one)
+              // If no validator, use passthrough (only for isolated tests)
               const validator: ComplianceValidator =
                 input.complianceValidator ?? createPassthroughValidator();
 
-              // Estado australiano para feriados (default: VIC)
+              // Australian state for holidays (default: VIC)
               const australianState = (input as any).australianState ?? 'VIC';
 
-              // Cargar penalty rules
+              // Load penalty rules
               let penaltyRules: PenaltyRule[] = (input.penaltyRules as PenaltyRule[]) ?? [];
               if (penaltyRules.length === 0) {
                 penaltyRules = await loadPenaltyRulesFromDb(input.roster.storeId);
               }
 
-              // Calcular costo inicial
+              // Calculate initial cost
               const costBefore = await calculateRosterRelativeCost(workingRoster, penaltyRules, australianState);
 
-              // --- PASO 1: Aplicar sugerencias de ComplianceWorker ---
-              // Estas ya fueron validadas, se aplican directamente
+              // --- STEP 1: Apply ComplianceWorker suggestions ---
+              // These have already been validated, apply directly
               let suggestionsApplied = 0;
               if (input.complianceFeedback?.suggestions?.length) {
                 for (const suggestion of input.complianceFeedback.suggestions) {
@@ -529,18 +529,18 @@ BENEFICIOS:
                   }
                 }
 
-                // Remover turnos marcados para eliminación
+                // Remove shifts marked for deletion
                 workingRoster.roster = workingRoster.roster.filter((s: any) => !s.__toRemove);
               }
 
-              // --- PASO 2: Optimizaciones adicionales con validación ---
-              // Cada cambio se valida con ComplianceWorker antes de aplicar
+              // --- STEP 2: Additional optimizations with validation ---
+              // Each change is validated with ComplianceWorker before applying
               let additionalOptimizations = 0;
 
               const opportunities = findCostOptimizationOpportunities(workingRoster, penaltyRules);
 
               for (const opportunity of opportunities) {
-                // Consultar a ComplianceWorker antes de aplicar
+                // Query ComplianceWorker before applying
                 const result = await tryOptimizationWithValidation(
                   workingRoster,
                   opportunity.shiftIndex,
@@ -549,7 +549,7 @@ BENEFICIOS:
                   validator,
                 );
 
-                // Registrar la consulta (para el trace)
+                // Record the query (for the trace)
                 validationQueries.push(result.query);
 
                 if (result.applied) {
@@ -557,7 +557,7 @@ BENEFICIOS:
                   additionalOptimizations++;
                   appliedChanges.push({
                     type: 'MOVED_SHIFT',
-                    description: `${opportunity.description} (validado por ComplianceWorker)`,
+                    description: `${opportunity.description} (validated by ComplianceWorker)`,
                     shiftIndex: opportunity.shiftIndex,
                     employeeId: workingRoster.roster[opportunity.shiftIndex]?.employeeId,
                     costImpact: opportunity.estimatedSavings,
@@ -565,7 +565,7 @@ BENEFICIOS:
                 }
               }
 
-              // --- PASO 3: Análisis de balance de horas ---
+              // --- STEP 3: Hours balance analysis ---
               const hoursBalance = analyzeHoursBalance(workingRoster);
               if (hoursBalance.imbalanced) {
                 appliedChanges.push({
@@ -575,7 +575,7 @@ BENEFICIOS:
                 });
               }
 
-              // --- PASO 4: Calcular métricas finales ---
+              // --- STEP 4: Calculate final metrics ---
               const costAfter = await calculateRosterRelativeCost(workingRoster, penaltyRules, australianState);
               const savingsPercent =
                 costBefore > 0 ? ((costBefore - costAfter) / costBefore) * 100 : 0;
@@ -592,7 +592,7 @@ BENEFICIOS:
 
               const score = calculateOptimizationScore(metrics, hoursBalance, validationQueries);
 
-              // Actualizar timestamp
+              // Update timestamp
               workingRoster.generatedAt = new Date().toISOString();
 
               const result: OptimizationResultWithQueries = {

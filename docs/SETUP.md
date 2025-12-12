@@ -1,6 +1,6 @@
 # Setup and Quick Start Guide
 
-This guide will help you configure and get the project running from scratch.
+This guide will help you configure and get the McDonald's Workforce Scheduling MAS project running from scratch.
 
 ---
 
@@ -9,14 +9,16 @@ This guide will help you configure and get the project running from scratch.
 Before you begin, make sure you have installed:
 
 - **Node.js 18+** (recommended: latest LTS version)
-- **npm** (comes with Node.js) or **pnpm** (faster alternative)
+- **npm** (comes with Node.js) or **pnpm**
+- **PostgreSQL 14+** (required for database)
 - **Git** (to clone the repository)
 
 To verify versions:
 
 ```bash
 node --version  # Must be v18 or higher
-npm --version   # or pnpm --version
+npm --version
+psql --version  # Must be v14 or higher
 ```
 
 ---
@@ -27,7 +29,7 @@ npm --version   # or pnpm --version
 
 ```bash
 git clone <repository-url>
-cd boiler-plate-nest-js
+cd mail-MAS
 ```
 
 ### 2. Install Dependencies
@@ -36,13 +38,11 @@ cd boiler-plate-nest-js
 npm install
 ```
 
-Or if you prefer to use pnpm:
-
-```bash
-pnpm install
-```
-
-This will install all dependencies listed in `package.json`.
+This will install all dependencies listed in `package.json`, including:
+- NestJS framework
+- OpenAI Agents SDK
+- TypeORM and PostgreSQL driver
+- Zod validation library
 
 ### 3. Configure Environment Variables
 
@@ -50,138 +50,127 @@ The project uses an environment variable loading system based on `NODE_ENV`.
 
 #### 3.1 Create environment files
 
-Copy the example file and create the files according to the environment:
+Copy the example file:
 
 ```bash
 # For development
-cp env.development.example .env.development
+cp .env.development.example .env.development
 
-# For production (optional, if you want to test locally)
-cp env.production.example .env.production
+# For production (optional)
+cp .env.production.example .env.production
 ```
 
-#### 3.2 Understand the loading system
+#### 3.2 Configure `.env.development`
 
-The project loads variables according to the `NODE_ENV` value:
+Edit `.env.development` with your actual values:
 
-- If `NODE_ENV=development` → loads `.env.development`
-- If `NODE_ENV=production` → loads `.env.production`
-- If `NODE_ENV=test` → loads `.env.test`
-
-**By default**, if `NODE_ENV` is not defined, it uses `development`.
-
-#### 3.3 Adjust values in `.env.development`
-
-Open `.env.development` and adjust the values according to your needs:
-
-````env
+```env
 # HTTP Server Port
 PORT=3000
 
+# PostgreSQL Database Connection
+DATABASE_URL=postgresql://username:password@localhost:5432/mas_scheduling
+
 # Allowed origin for CORS
-# You can use * to allow all, or a specific URL
 CORS_ORIGIN=*
 
-# Database URL (if you're going to use one)
-DATABASE_URL=postgresql://user:password@localhost:5432/mydb
-
-# Frontend URL (if you have one)
+# Frontend URL (for linking)
 FRONTEND_URL=http://localhost:3000
 
 # Logging - Levels: fatal | error | warn | info | debug | trace | silent
-# If omitted, uses: info in production, debug in development
 LOGGER_LEVEL=debug
 
-# If FULL_LOGS=true → logs complete request/response
-# If FULL_LOGS=false → logs only basic data
+# Full request/response logging (set to true for debugging)
 FULL_LOGS=false
 
 # Rate limiting
-RATE_LIMIT_TTL=60          # Time window in seconds
-RATE_LIMIT_LIMIT=100       # Requests allowed per IP
-### 🔐 OpenAI Agents (Optional)
+RATE_LIMIT_TTL=60
+RATE_LIMIT_LIMIT=100
 
-If you plan to use the OpenAI Agents SDK integration (MAS), add the following keys to your `.env.*` files and configure the default agent behavior as needed:
-
-```env
-# OpenAI API Key (required for Agents usage)
+# OpenAI Configuration (required for AI-powered scheduling)
 OPENAI_API_KEY=sk-your-openai-api-key
-OPENAI_ORG_ID=org-your-openai-org-id
-# Agent defaults (optional)
-AGENT_MODEL=gpt-4-turbo-preview
-AGENT_TEMPERATURE=0.1
-AGENT_MAX_TOKENS=2000
-````
 
-Make sure to **never** check the `.env.*` files containing real secrets into version control. Use environment secrets management for CI and production.
+# Optional: Agent model configuration
+# AGENT_MODEL=gpt-4-turbo-preview
+# AGENT_TEMPERATURE=0.1
+# AGENT_MAX_TOKENS=4000
+```
 
-````
+> **Note**: The system has a fallback mode that works without OpenAI API key. If `OPENAI_API_KEY` is not set, the orchestrator will use deterministic scheduling algorithms.
 
-**Note**: For local development, the default values from `env.development.example` are usually sufficient.
+### 4. Setup PostgreSQL Database
 
-### 4. Start the Project
+#### 4.1 Create the database
 
-#### Development Mode (Recommended to start)
+```bash
+# Connect to PostgreSQL
+psql -U postgres
+
+# Create database
+CREATE DATABASE mas_scheduling;
+
+# Exit psql
+\q
+```
+
+#### 4.2 Run database migrations (automatic with TypeORM)
+
+TypeORM will automatically synchronize the schema on first run if `synchronize: true` is set in development.
+
+### 5. Seed the Database
+
+Populate the database with sample data (stores, employees, stations, etc.):
+
+```bash
+npm run seed
+```
+
+This command will create:
+- Sample stores with operating hours
+- Employees with different contract types
+- Work stations (Kitchen, Counter, Drive-Thru, etc.)
+- Employee availability schedules
+- Staff requirements by time period
+
+### 6. Start the Project
+
+#### Development Mode (Recommended)
 
 ```bash
 npm run start:dev
-````
+```
 
 This command:
-
 - Sets `NODE_ENV=development`
 - Starts the server in watch mode (automatic reload)
-- Compiles TypeScript on-the-fly
 - Loads `.env.development`
+- Enables Swagger at `/docs`
+- Shows colored logs with `pino-pretty`
 
-You should see something like:
+You should see output like:
 
 ```
 [Nest] INFO  Starting Nest application...
-[Nest] INFO  Logger initialized
 [Nest] INFO  Server is running on port 3000
 [Nest] INFO  Docs are running on port 3000/docs
 [Nest] INFO  Environment: development
+[Nest] INFO  Database connected successfully
 ```
 
-#### Other available commands
+#### Other Commands
 
-**Production with watch (to test in production mode):**
+| Command | Description |
+|---------|-------------|
+| `npm run start:dev` | Development with watch mode |
+| `npm run start:prod:watch` | Production mode with watch |
+| `npm run build` | Compile TypeScript to JavaScript |
+| `npm run start:prod` | Run compiled code (requires build first) |
+| `npm test` | Run unit tests |
+| `npm run test:cov` | Tests with coverage report |
+| `npm run test:e2e` | End-to-end tests |
+| `npm run seed` | Seed database with sample data |
 
-```bash
-npm run start:prod:watch
-```
-
-- Sets `NODE_ENV=production`
-- Watch mode enabled (automatic reload)
-- Useful for testing production behavior locally
-
-**Build and production execution:**
-
-```bash
-# 1. Build the project
-npm run build
-
-# 2. Run from dist/
-npm run start:prod
-```
-
-- Compiles TypeScript to JavaScript in the `dist/` folder
-- Runs the compiled code directly with Node.js
-- Requires having run `build` previously
-
-**Tests:**
-
-```bash
-npm test                # Run tests once
-npm run test:watch      # Run tests in watch mode
-npm run test:cov        # Tests with coverage
-npm run test:e2e        # End-to-end tests
-```
-
-### 5. Verify It Works
-
-Once the server is started, test the following endpoints:
+### 7. Verify Everything Works
 
 #### Health Check
 
@@ -190,7 +179,6 @@ curl http://localhost:3000/health
 ```
 
 Expected response:
-
 ```json
 {
   "status": "ok",
@@ -199,86 +187,68 @@ Expected response:
 }
 ```
 
-#### Swagger (development only)
+#### Swagger Documentation
 
 Open in your browser:
-
 ```
 http://localhost:3000/docs
 ```
 
-You should see the Swagger interface with the API documentation.
+You should see the Swagger UI with all available endpoints.
 
-**Note**: Swagger is only available when `NODE_ENV=development`. In production it will not be available for security reasons.
+> **Note**: Swagger is only available in development mode.
 
-### Quick Launch (MVP — tomorrow)
-
-These steps are the minimal actions to get the project ready for a demo tomorrow (MVP): generate a roster, validate compliance and run optimization in the fallback mode.
-
-Steps to run locally:
-
-1. Install dependencies:
+#### Test Roster Generation
 
 ```bash
-npm install
+curl -X POST http://localhost:3000/roster/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "storeId": 1,
+    "startDate": "2025-01-06",
+    "endDate": "2025-01-12"
+  }'
 ```
-
-2. Create `.env.development` from `.env.example` and set your environment variables. If you do not want to use the OpenAI Agent SDK, leave `OPENAI_API_KEY` and `OPENAI_ORG_ID` empty; the orchestrator will run in fallback mode.
-3. Run tests to verify everything works:
-
-```bash
-npm run build
-npm test
-```
-
-4. Start the app in development mode (optional port):
-
-```bash
-PORT=3002 npm run start:dev
-```
-
-Validation smoke test for the MVP:
-
-- Verify `GET /health` is healthy.
-- The integration test `src/agents/orchestrator.service.integration.spec.ts` runs the fallback flow (roster → compliance → optimization). You can run `npm test` to perform the integration.
-
-Troubleshooting and points to check before demo:
-
-- Ensure `.env` does not contain production secrets.
-- Verify that `ComplianceWorker` marks `CRITICAL` issues — this should block automatic roster acceptance.
-- Confirm that the fallback mode (no `@openai/agents`) starts successfully and that logs include 'OpenAI agents Orchestrator not initialized'.
 
 ---
 
 ## 🔧 Available Scripts
 
-Here is the complete list of scripts in `package.json`:
-
-| Script             | Description                                             |
-| ------------------ | ------------------------------------------------------- |
-| `start:dev`        | Development with watch mode, `NODE_ENV=development`     |
-| `start:prod:watch` | Production with watch mode, `NODE_ENV=production`       |
-| `build`            | Compiles TypeScript to JavaScript in `dist/`            |
-| `start:prod`       | Runs `node dist/main` (requires previous build)         |
-| `start`            | Starts without watch (not recommended, use `start:dev`) |
-| `start:debug`      | Starts in debug mode with watch                         |
-| `test`             | Runs unit tests                                         |
-| `test:watch`       | Runs tests in watch mode                                |
-| `test:cov`         | Runs tests with coverage report                         |
-| `test:e2e`         | Runs end-to-end tests                                   |
-| `lint`             | Runs ESLint and fixes errors automatically              |
-| `format`           | Formats code with Prettier                              |
+| Script | Description |
+|--------|-------------|
+| `start:dev` | Development with watch mode, `NODE_ENV=development` |
+| `start:prod:watch` | Production with watch mode |
+| `build` | Compiles TypeScript to JavaScript in `dist/` |
+| `start:prod` | Runs `node dist/main` (requires previous build) |
+| `test` | Runs unit tests |
+| `test:watch` | Runs tests in watch mode |
+| `test:cov` | Runs tests with coverage report |
+| `test:e2e` | Runs end-to-end tests |
+| `seed` | Seeds database with sample data |
+| `lint` | Runs ESLint and fixes errors |
+| `format` | Formats code with Prettier |
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Server won't start
+### Database Connection Failed
+
+**Error**: `connection refused` or `ECONNREFUSED`
+
+- Verify PostgreSQL is running: `pg_isready`
+- Check your `DATABASE_URL` is correct
+- Ensure the database exists: `psql -l`
+
+**Error**: `authentication failed`
+
+- Verify username and password in `DATABASE_URL`
+- Check PostgreSQL authentication settings (`pg_hba.conf`)
+
+### Server Won't Start
 
 **Port in use:**
-
 ```bash
-# Check which process is using port 3000
 # Windows:
 netstat -ano | findstr :3000
 
@@ -286,45 +256,29 @@ netstat -ano | findstr :3000
 lsof -i :3000
 ```
 
-Solution: Change the `PORT` in your `.env.development` or terminate the process using the port.
+Solution: Change `PORT` in `.env.development` or terminate the process.
 
-**File .env not found:**
+**File `.env` not found:**
+- Verify `.env.development` exists
+- Make sure you created it from `.env.development.example`
 
-- Verify that `.env.development` exists (or `.env.production` according to your `NODE_ENV`)
-- Make sure you created it from `env.development.example` or `env.production.example` as appropriate
+### OpenAI API Errors
 
-**Dependency errors:**
+**Error**: `OPENAI_API_KEY is not set`
+- The system will use fallback mode (deterministic scheduling)
+- Set `OPENAI_API_KEY` in `.env.development` for AI-powered scheduling
+
+**Error**: `Rate limit exceeded`
+- Wait a few minutes and try again
+- Consider upgrading your OpenAI plan
+
+### TypeScript Compilation Errors
 
 ```bash
 # Clean and reinstall
-rm -rf node_modules package-lock.json
+rm -rf node_modules dist
 npm install
-```
-
-### Swagger doesn't appear
-
-- Swagger is only available in development (`NODE_ENV=development`)
-- Verify you're running with `npm run start:dev`
-- Access `http://localhost:<PORT>/docs` (verify the correct port)
-
-### Rate limiting too aggressive
-
-If you receive 429 errors (Too Many Requests):
-
-- Increase `RATE_LIMIT_LIMIT` in your `.env.development`
-- Or increase `RATE_LIMIT_TTL` for a wider window
-- For example:
-  ```env
-  RATE_LIMIT_TTL=60
-  RATE_LIMIT_LIMIT=1000
-  ```
-
-### TypeScript compilation errors
-
-```bash
-# Verify that tsconfig.json exists and is correct
-# Reinstall TypeScript dependencies
-npm install --save-dev typescript @types/node
+npm run build
 ```
 
 ---
@@ -334,12 +288,15 @@ npm install --save-dev typescript @types/node
 Before starting development, verify:
 
 - [ ] Node.js 18+ installed
+- [ ] PostgreSQL 14+ installed and running
 - [ ] Dependencies installed (`npm install`)
 - [ ] `.env.development` file created and configured
+- [ ] Database created in PostgreSQL
+- [ ] Database seeded (`npm run seed`)
 - [ ] Server starts correctly (`npm run start:dev`)
 - [ ] Health check responds (`GET /health`)
-- [ ] Swagger is available (`GET /docs`) - development only
-- [ ] No errors in console
+- [ ] Swagger is available (`GET /docs`)
+- [ ] Roster generation works (`POST /roster/generate`)
 
 ---
 
@@ -347,18 +304,18 @@ Before starting development, verify:
 
 Once the project is running:
 
-1. Read [ARCHITECTURE.md](./ARCHITECTURE.md) to understand the project structure
-2. Read [DETAILS.md](./DETAILS.md) to learn about specific functionalities
-3. Start adding your modules in `src/modules/`
-4. Define your DTOs with validation using `class-validator`
-5. Configure your database if you need it
+1. Read [ARCHITECTURE.md](./ARCHITECTURE.md) to understand the MAS structure
+2. Read [DETAILS.md](./DETAILS.md) for technical implementation details
+3. Explore the API using Swagger at `/docs`
+4. Test roster generation with different parameters
+5. Review the seed data to understand the data model
 
 ---
 
 ## 💡 Tips
 
 - **Hot Reload**: In `start:dev` mode, changes reload automatically
-- **Environment variables**: Always use development values for `env.development`
-- **Git**: Don't forget to add `.env.*` to `.gitignore` (already configured)
-- **Logs**: In development you'll see colored logs thanks to `pino-pretty`
-- **TypeScript**: The project uses strict mode, so pay attention to types
+- **Fallback Mode**: The system works without OpenAI API key using deterministic algorithms
+- **Swagger**: Use Swagger UI to test endpoints interactively
+- **Logs**: In development, logs are colored for better readability
+- **TypeScript**: The project uses strict mode, pay attention to types

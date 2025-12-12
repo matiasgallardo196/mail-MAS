@@ -13,13 +13,13 @@ export class StationsService {
   ) {}
 
   async create(createStationDto: CreateStationDto): Promise<Station> {
-    // Verificar si el código ya existe
+    // Check if code already exists
     const existingStation = await this.stationRepository.findOne({
       where: { code: createStationDto.code },
     });
 
     if (existingStation) {
-      throw new ConflictException(`La estación con código "${createStationDto.code}" ya existe`);
+      throw new ConflictException(`Station with code "${createStationDto.code}" already exists`);
     }
 
     const station = this.stationRepository.create(createStationDto);
@@ -39,7 +39,7 @@ export class StationsService {
     });
 
     if (!station) {
-      throw new NotFoundException(`Estación con ID "${id}" no encontrada`);
+      throw new NotFoundException(`Station with ID "${id}" not found`);
     }
 
     return station;
@@ -48,14 +48,14 @@ export class StationsService {
   async update(id: string, updateStationDto: UpdateStationDto): Promise<Station> {
     const station = await this.findOne(id);
 
-    // Si se está actualizando el código, verificar que no exista otro con el mismo código
+    // If updating code, verify no other station has it
     if (updateStationDto.code && updateStationDto.code !== station.code) {
       const existingStation = await this.stationRepository.findOne({
         where: { code: updateStationDto.code },
       });
 
       if (existingStation) {
-        throw new ConflictException(`La estación con código "${updateStationDto.code}" ya existe`);
+        throw new ConflictException(`Station with code "${updateStationDto.code}" already exists`);
       }
     }
 

@@ -32,60 +32,60 @@ import type { Roster } from '../../shared/types/roster';
 import type { RosterContext, CoverageMetrics } from '../../shared/schemas/roster-context.schema';
 
 /**
- * RosterWorker - Experto en generación de turnos
+ * RosterWorker - Shift generation expert
  *
- * Responsabilidades:
- * - Consultar disponibilidad de empleados vía employee.tools
- * - Consultar requerimientos de staff vía store.tools
- * - Generar asignaciones respetando constraints
- * - Validar cobertura y generar métricas
+ * Responsibilities:
+ * - Query employee availability via employee.tools
+ * - Query staff requirements via store.tools
+ * - Generate assignments respecting constraints
+ * - Validate coverage and generate metrics
  *
- * Colaboración con otros agents:
- * - Recibe requests del Orchestrator/Planner
- * - Su output es validado por ComplianceWorker
- * - Puede aplicar suggestions del ComplianceWorker o ConflictWorker
+ * Collaboration with other agents:
+ * - Receives requests from Orchestrator/Planner
+ * - Its output is validated by ComplianceWorker
+ * - Can apply suggestions from ComplianceWorker or ConflictWorker
  */
 export class RosterWorker extends WorkerBase {
   constructor() {
     super({
       name: 'RosterWorker',
       instructions: `
-        Eres un experto en asignación de turnos para tiendas McDonald's. Tu tarea es:
+        You are an expert in shift assignment for McDonald's stores. Your task is:
 
-        1. OBTENER CONTEXTO:
-           - Consultar disponibilidad declarada de empleados (shift codes: 1F, 2F, 3F)
-           - Consultar requerimientos de staff por estación (KITCHEN, COUNTER, MCCAFE, etc.)
-           - Consultar skills de cada empleado para matching con estaciones
+        1. GET CONTEXT:
+           - Query declared employee availability (shift codes: 1F, 2F, 3F)
+           - Query staff requirements by station (KITCHEN, COUNTER, MCCAFE, etc.)
+           - Query each employee's skills for station matching
 
-        2. GENERAR ROSTER:
-           - Solo asignar empleados que estén disponibles en esa fecha
-           - Respetar los horarios del shift code declarado (1F=06:30-15:30, 2F=14:00-23:00, etc.)
-           - Matchear empleados con sus estaciones por defecto cuando sea posible
-           - Balancear la carga de turnos entre empleados
-           - Intentar cubrir los requerimientos mínimos de staff por estación
+        2. GENERATE ROSTER:
+           - Only assign employees who are available on that date
+           - Respect the declared shift code schedules (1F=06:30-15:30, 2F=14:00-23:00, etc.)
+           - Match employees with their default stations when possible
+           - Balance shift load among employees
+           - Try to cover minimum staff requirements per station
 
-        3. VALIDAR COBERTURA:
-           - Verificar que cada estación tenga el staff mínimo requerido
-           - Generar warnings si hay gaps de cobertura
-           - Calcular métricas de calidad del roster
+        3. VALIDATE COVERAGE:
+           - Verify that each station has the minimum required staff
+           - Generate warnings if there are coverage gaps
+           - Calculate roster quality metrics
 
-        4. RESPONDER CON EVIDENCIA:
-           - Incluir métricas de cobertura en el output
-           - Listar warnings de gaps si existen
-           - Proporcionar datos que ComplianceWorker pueda validar
+        4. RESPOND WITH EVIDENCE:
+           - Include coverage metrics in the output
+           - List gap warnings if they exist
+           - Provide data that ComplianceWorker can validate
 
-        CONSTRAINTS IMPORTANTES:
-        - No asignar empleados no disponibles
-        - Respetar shift codes declarados (no inventar horarios)
-        - Priorizar cobertura de estaciones sobre balance perfecto
+        IMPORTANT CONSTRAINTS:
+        - Do not assign unavailable employees
+        - Respect declared shift codes (do not invent schedules)
+        - Prioritize station coverage over perfect balance
       `,
       tools: [
-        // Tool 1: Obtener contexto completo
+        // Tool 1: Get complete context
         {
           type: 'function',
           function: {
             name: 'get_roster_context',
-            description: 'Obtiene todo el contexto necesario para generar un roster: disponibilidad de empleados, requerimientos de staff, skills y contratos. Consulta la DB vía employee.tools y store.tools.',
+            description: 'Gets all the context needed to generate a roster: employee availability, staff requirements, skills and contracts. Queries the DB via employee.tools and store.tools.',
             parameters: GetRosterContextParams,
             execute: async (args: unknown) => {
               const parsed = GetRosterContextParams.parse(args);
@@ -94,18 +94,18 @@ export class RosterWorker extends WorkerBase {
             },
           },
         },
-        // Tool 2: Generar roster inicial
+        // Tool 2: Generate initial roster
         {
           type: 'function',
           function: {
             name: 'generate_initial_roster',
             description:
-              'Genera una asignación inicial de turnos basada en disponibilidad, skills y requerimientos de staff. Consulta la DB automáticamente y aplica lógica de matching.',
+              'Generates an initial shift assignment based on availability, skills and staff requirements. Queries the DB automatically and applies matching logic.',
             parameters: GenerateInitialRosterParams,
             execute: async (args: unknown) => {
               const parsed = GenerateInitialRosterParams.parse(args);
               const result = await generateInitialRoster(parsed);
-              // El resultado incluye roster + métricas
+              // Result includes roster + metrics
               return RosterSchema.extend({
                 metrics: z.object({
                   totalShifts: z.number(),
@@ -118,13 +118,13 @@ export class RosterWorker extends WorkerBase {
             },
           },
         },
-        // Tool 3: Validar cobertura
+        // Tool 3: Validate coverage
         {
           type: 'function',
           function: {
             name: 'validate_coverage',
             description:
-              'Valida que un roster cumpla con los requerimientos de staff por estación. Retorna métricas de cobertura y warnings de gaps.',
+              'Validates that a roster meets staff requirements per station. Returns coverage metrics and gap warnings.',
             parameters: ValidateCoverageParams,
             execute: async (args: unknown) => {
               const parsed = ValidateCoverageParams.parse(args);

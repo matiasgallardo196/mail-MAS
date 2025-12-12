@@ -57,7 +57,7 @@ async function resolvePolicy(storeId: string): Promise<SchedulingPolicy | null> 
 export const storeTools = {
   getStoreHours: {
     name: 'get_store_hours',
-    description: 'Obtiene horarios de apertura/cierre desde la DB',
+    description: 'Gets opening/closing hours from DB',
     inputSchema: GetStoreInput,
     outputSchema: StoreHoursSchema,
     execute: async ({ storeId }: z.infer<typeof GetStoreInput>) => {
@@ -65,7 +65,7 @@ export const storeTools = {
       const repo = ds.getRepository(Store);
       const store = await repo.findOne({ where: { id: storeId } });
       if (!store) {
-        throw new Error(`Store ${storeId} no encontrada`);
+        throw new Error(`Store ${storeId} not found`);
       }
       return StoreHoursSchema.parse({
         storeId,
@@ -77,7 +77,7 @@ export const storeTools = {
 
   getStoreStaffRequirements: {
     name: 'get_store_staff_requirements',
-    description: 'Requerimientos de staff por estación y periodo desde DB',
+    description: 'Staff requirements by station and period from DB',
     inputSchema: GetStoreInput,
     outputSchema: StoreRequirementsSchema,
     execute: async ({ storeId }: z.infer<typeof GetStoreInput>) => {
@@ -100,7 +100,7 @@ export const storeTools = {
 
   getStorePolicy: {
     name: 'get_store_policy',
-    description: 'Obtiene la policy de scheduling (scope store o global) desde la DB',
+    description: 'Gets the scheduling policy (store or global scope) from DB',
     inputSchema: GetStorePolicyInput,
     outputSchema: SchedulingPolicySchema.nullable(),
     execute: async ({ storeId }: z.infer<typeof GetStorePolicyInput>) => {
@@ -120,7 +120,7 @@ export const storeTools = {
 
   getStoreForecast: {
     name: 'get_store_forecast',
-    description: 'Placeholder: forecasting no implementado; retorna vacío si DB no lo provee',
+    description: 'Placeholder: forecasting not implemented; returns empty if DB does not provide',
     inputSchema: GetForecastInput,
     outputSchema: z.array(
       z.object({
@@ -129,7 +129,7 @@ export const storeTools = {
       }),
     ),
     execute: async ({ startDate, endDate }: z.infer<typeof GetForecastInput>) => {
-      // No hay tabla de forecast definida aún. Retornar vacío para forzar fail-safe en capas superiores.
+      // No forecast table defined yet. Return empty to force fail-safe in upper layers.
       return [];
     },
   },

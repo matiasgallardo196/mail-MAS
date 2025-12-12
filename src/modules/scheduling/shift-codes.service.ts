@@ -13,13 +13,13 @@ export class ShiftCodesService {
   ) {}
 
   async create(createShiftCodeDto: CreateShiftCodeDto): Promise<ShiftCode> {
-    // Verificar si el código ya existe
+    // Check if code already exists
     const existingShiftCode = await this.shiftCodeRepository.findOne({
       where: { code: createShiftCodeDto.code },
     });
 
     if (existingShiftCode) {
-      throw new ConflictException(`El código de turno "${createShiftCodeDto.code}" ya existe`);
+      throw new ConflictException(`Shift code "${createShiftCodeDto.code}" already exists`);
     }
 
     const shiftCode = this.shiftCodeRepository.create({
@@ -44,7 +44,7 @@ export class ShiftCodesService {
     });
 
     if (!shiftCode) {
-      throw new NotFoundException(`Código de turno con ID "${id}" no encontrado`);
+      throw new NotFoundException(`Shift code with ID "${id}" not found`);
     }
 
     return shiftCode;
@@ -53,14 +53,14 @@ export class ShiftCodesService {
   async update(id: string, updateShiftCodeDto: UpdateShiftCodeDto): Promise<ShiftCode> {
     const shiftCode = await this.findOne(id);
 
-    // Si se está actualizando el código, verificar que no exista otro con el mismo código
+    // If updating code, verify no other shift code has it
     if (updateShiftCodeDto.code && updateShiftCodeDto.code !== shiftCode.code) {
       const existingShiftCode = await this.shiftCodeRepository.findOne({
         where: { code: updateShiftCodeDto.code },
       });
 
       if (existingShiftCode) {
-        throw new ConflictException(`El código de turno "${updateShiftCodeDto.code}" ya existe`);
+        throw new ConflictException(`Shift code "${updateShiftCodeDto.code}" already exists`);
       }
     }
 

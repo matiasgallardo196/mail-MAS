@@ -29,7 +29,7 @@ export class SeederService {
   constructor(private readonly dataSource: DataSource) {}
 
   async seedAll(): Promise<void> {
-    this.logger.log('Iniciando proceso de seeding...');
+    this.logger.log('Starting seeding process...');
 
     try {
       await this.seedStations();
@@ -44,15 +44,15 @@ export class SeederService {
       await this.seedEmployees();
       await this.seedEmployeeAvailability();
 
-      this.logger.log('✅ Seeding completado exitosamente');
+      this.logger.log('✅ Seeding completed successfully');
     } catch (error) {
-      this.logger.error('❌ Error durante el seeding:', error);
+      this.logger.error('❌ Error during seeding:', error);
       throw error;
     }
   }
 
   private async seedStations(): Promise<void> {
-    this.logger.log(`Sembrando ${stationsSeed.length} estaciones...`);
+    this.logger.log(`Seeding ${stationsSeed.length} stations...`);
     const repository = this.dataSource.getRepository(Station);
 
     for (const stationData of stationsSeed) {
@@ -63,15 +63,15 @@ export class SeederService {
       if (!existing) {
         const station = repository.create(stationData);
         await repository.save(station);
-        this.logger.log(`  ✓ Estación creada: ${stationData.code}`);
+        this.logger.log(`  ✓ Station created: ${stationData.code}`);
       } else {
-        this.logger.log(`  ⊙ Estación ya existe: ${stationData.code}`);
+        this.logger.log(`  ⊙ Station already exists: ${stationData.code}`);
       }
     }
   }
 
   private async seedStores(): Promise<void> {
-    this.logger.log(`Sembrando ${storesSeed.length} tiendas...`);
+    this.logger.log(`Seeding ${storesSeed.length} stores...`);
     const repository = this.dataSource.getRepository(Store);
 
     for (const storeData of storesSeed) {
@@ -82,15 +82,15 @@ export class SeederService {
       if (!existing) {
         const store = repository.create(storeData);
         await repository.save(store);
-        this.logger.log(`  ✓ Tienda creada: ${storeData.code}`);
+        this.logger.log(`  ✓ Store created: ${storeData.code}`);
       } else {
-        this.logger.log(`  ⊙ Tienda ya existe: ${storeData.code}`);
+        this.logger.log(`  ⊙ Store already exists: ${storeData.code}`);
       }
     }
   }
 
   private async seedShiftCodes(): Promise<void> {
-    this.logger.log(`Sembrando ${shiftCodesSeed.length} códigos de turno...`);
+    this.logger.log(`Seeding ${shiftCodesSeed.length} shift codes...`);
     const repository = this.dataSource.getRepository(ShiftCode);
 
     for (const shiftCodeData of shiftCodesSeed) {
@@ -105,15 +105,15 @@ export class SeederService {
           endTime: shiftCodeData.endTime || undefined,
         });
         await repository.save(shiftCode);
-        this.logger.log(`  ✓ Código de turno creado: ${shiftCodeData.code}`);
+        this.logger.log(`  ✓ Shift code created: ${shiftCodeData.code}`);
       } else {
-        this.logger.log(`  ⊙ Código de turno ya existe: ${shiftCodeData.code}`);
+        this.logger.log(`  ⊙ Shift code already exists: ${shiftCodeData.code}`);
       }
     }
   }
 
   private async seedStoreStations(): Promise<void> {
-    this.logger.log(`Sembrando ${storeStationsSeed.length} relaciones Store-Station...`);
+    this.logger.log(`Seeding ${storeStationsSeed.length} Store-Station relationships...`);
     const storeRepository = this.dataSource.getRepository(Store);
     const stationRepository = this.dataSource.getRepository(Station);
     const storeStationRepository = this.dataSource.getRepository(StoreStation);
@@ -129,7 +129,7 @@ export class SeederService {
 
       if (!store || !station) {
         this.logger.warn(
-          `  ⚠ No se encontró store o station: ${storeStationData.storeCode} - ${storeStationData.stationCode}`,
+          `  ⚠ Store or station not found: ${storeStationData.storeCode} - ${storeStationData.stationCode}`,
         );
         continue;
       }
@@ -148,15 +148,15 @@ export class SeederService {
           isEnabled: storeStationData.isEnabled,
         });
         await storeStationRepository.save(storeStation);
-        this.logger.log(`  ✓ Relación creada: ${storeStationData.storeCode} - ${storeStationData.stationCode}`);
+        this.logger.log(`  ✓ Relationship created: ${storeStationData.storeCode} - ${storeStationData.stationCode}`);
       } else {
-        this.logger.log(`  ⊙ Relación ya existe: ${storeStationData.storeCode} - ${storeStationData.stationCode}`);
+        this.logger.log(`  ⊙ Relationship already exists: ${storeStationData.storeCode} - ${storeStationData.stationCode}`);
       }
     }
   }
 
   private async seedStoreStaffRequirements(): Promise<void> {
-    this.logger.log(`Sembrando ${staffRequirementsSeed.length} requisitos de personal...`);
+    this.logger.log(`Seeding ${staffRequirementsSeed.length} staff requirements...`);
     const storeRepository = this.dataSource.getRepository(Store);
     const stationRepository = this.dataSource.getRepository(Station);
     const requirementRepository = this.dataSource.getRepository(StoreStaffRequirement);
@@ -172,7 +172,7 @@ export class SeederService {
 
       if (!store || !station) {
         this.logger.warn(
-          `  ⚠ No se encontró store o station: ${requirementData.storeCode} - ${requirementData.stationCode}`,
+          `  ⚠ Store or station not found: ${requirementData.storeCode} - ${requirementData.stationCode}`,
         );
         continue;
       }
@@ -194,18 +194,18 @@ export class SeederService {
         });
         await requirementRepository.save(requirement);
         this.logger.log(
-          `  ✓ Requisito creado: ${requirementData.storeCode} - ${requirementData.periodType} - ${requirementData.stationCode}`,
+          `  ✓ Requirement created: ${requirementData.storeCode} - ${requirementData.periodType} - ${requirementData.stationCode}`,
         );
       } else {
         this.logger.log(
-          `  ⊙ Requisito ya existe: ${requirementData.storeCode} - ${requirementData.periodType} - ${requirementData.stationCode}`,
+          `  ⊙ Requirement already exists: ${requirementData.storeCode} - ${requirementData.periodType} - ${requirementData.stationCode}`,
         );
       }
     }
   }
 
   private async seedSchedulePeriods(): Promise<void> {
-    this.logger.log(`Sembrando ${schedulePeriodsSeed.length} períodos de programación...`);
+    this.logger.log(`Seeding ${schedulePeriodsSeed.length} schedule periods...`);
     const storeRepository = this.dataSource.getRepository(Store);
     const periodRepository = this.dataSource.getRepository(SchedulePeriod);
 
@@ -215,7 +215,7 @@ export class SeederService {
       });
 
       if (!store) {
-        this.logger.warn(`  ⚠ No se encontró store: ${periodData.storeCode}`);
+        this.logger.warn(`  ⚠ Store not found: ${periodData.storeCode}`);
         continue;
       }
 
@@ -235,15 +235,15 @@ export class SeederService {
           endDate: new Date(periodData.endDate),
         });
         await periodRepository.save(period);
-        this.logger.log(`  ✓ Período creado: ${periodData.name}`);
+        this.logger.log(`  ✓ Period created: ${periodData.name}`);
       } else {
-        this.logger.log(`  ⊙ Período ya existe: ${periodData.name}`);
+        this.logger.log(`  ⊙ Period already exists: ${periodData.name}`);
       }
     }
   }
 
   private async seedEmployees(): Promise<void> {
-    this.logger.log(`Sembrando ${employeesSeed.length} empleados...`);
+    this.logger.log(`Seeding ${employeesSeed.length} employees...`);
     const storeRepository = this.dataSource.getRepository(Store);
     const stationRepository = this.dataSource.getRepository(Station);
     const employeeRepository = this.dataSource.getRepository(Employee);
@@ -265,7 +265,7 @@ export class SeederService {
         : null;
 
       if (!store) {
-        this.logger.warn(`  ⚠ No se encontró store: ${employeeData.defaultStoreCode}`);
+        this.logger.warn(`  ⚠ Store not found: ${employeeData.defaultStoreCode}`);
         continue;
       }
 
@@ -275,9 +275,9 @@ export class SeederService {
         if (currentStationCode !== employeeData.defaultStationCode) {
           existing.defaultStation = station || undefined;
           await employeeRepository.save(existing);
-          this.logger.log(`  ↻ Empleado actualizado (station): ${employeeData.externalCode} → ${employeeData.defaultStationCode || 'null'}`);
+          this.logger.log(`  ↻ Employee updated (station): ${employeeData.externalCode} → ${employeeData.defaultStationCode || 'null'}`);
         } else {
-          this.logger.log(`  ⊙ Empleado ya existe: ${employeeData.externalCode}`);
+          this.logger.log(`  ⊙ Employee already exists: ${employeeData.externalCode}`);
         }
         continue;
       }
@@ -294,13 +294,13 @@ export class SeederService {
 
       await employeeRepository.save(employee);
       this.logger.log(
-        `  ✓ Empleado creado: ${employeeData.externalCode} - ${employeeData.firstName} ${employeeData.lastName}`,
+        `  ✓ Employee created: ${employeeData.externalCode} - ${employeeData.firstName} ${employeeData.lastName}`,
       );
     }
   }
 
   private async seedEmployeeAvailability(): Promise<void> {
-    this.logger.log(`Sembrando ${employeeAvailabilitySeed.length} registros de disponibilidad...`);
+    this.logger.log(`Seeding ${employeeAvailabilitySeed.length} availability records...`);
     const employeeRepository = this.dataSource.getRepository(Employee);
     const storeRepository = this.dataSource.getRepository(Store);
     const shiftCodeRepository = this.dataSource.getRepository(ShiftCode);
@@ -317,14 +317,14 @@ export class SeederService {
       });
 
       if (!employee) {
-        this.logger.warn(`  ⚠ No se encontró empleado: ${availabilityData.externalCode}`);
+        this.logger.warn(`  ⚠ Employee not found: ${availabilityData.externalCode}`);
         skipped++;
         continue;
       }
 
       const store = employee.defaultStore;
       if (!store) {
-        this.logger.warn(`  ⚠ Empleado ${availabilityData.externalCode} no tiene store asignado`);
+        this.logger.warn(`  ⚠ Employee ${availabilityData.externalCode} has no assigned store`);
         skipped++;
         continue;
       }
@@ -334,14 +334,14 @@ export class SeederService {
       });
 
       if (!shiftCode) {
-        this.logger.warn(`  ⚠ No se encontró código de turno: ${availabilityData.shiftCode}`);
+        this.logger.warn(`  ⚠ Shift code not found: ${availabilityData.shiftCode}`);
         skipped++;
         continue;
       }
 
-      // Determinar el período basado en la fecha
+      // Determine period based on date
       const date = new Date(availabilityData.date);
-      date.setHours(0, 0, 0, 0); // Normalizar a medianoche para comparación
+      date.setHours(0, 0, 0, 0); // Normalize to midnight for comparison
 
       const periods = await periodRepository.find({
         where: { store: { id: store.id } },
@@ -356,12 +356,12 @@ export class SeederService {
       });
 
       if (!period) {
-        this.logger.warn(`  ⚠ No se encontró período para la fecha: ${availabilityData.date}`);
+        this.logger.warn(`  ⚠ Period not found for date: ${availabilityData.date}`);
         skipped++;
         continue;
       }
 
-      // Verificar si ya existe
+      // Check if already exists
       const existing = await availabilityRepository.findOne({
         where: {
           employee: { id: employee.id },
@@ -375,7 +375,7 @@ export class SeederService {
         continue;
       }
 
-      // Usar la estación del empleado como default (opcional)
+      // Use employee's station as default (optional)
       const station = employee.defaultStation || undefined;
 
       const availability = availabilityRepository.create({
@@ -391,15 +391,15 @@ export class SeederService {
       created++;
 
       if (created % 50 === 0) {
-        this.logger.log(`  Progreso: ${created} registros creados...`);
+        this.logger.log(`  Progress: ${created} records created...`);
       }
     }
 
-    this.logger.log(`  ✓ Disponibilidad completada: ${created} creados, ${skipped} omitidos`);
+    this.logger.log(`  ✓ Availability completed: ${created} created, ${skipped} skipped`);
   }
 
   private async seedSchedulingPolicies(): Promise<void> {
-    this.logger.log(`Sembrando ${schedulingPoliciesSeed.length} scheduling policies...`);
+    this.logger.log(`Seeding ${schedulingPoliciesSeed.length} scheduling policies...`);
     const policyRepository = this.dataSource.getRepository(SchedulingPolicy);
     const storeRepository = this.dataSource.getRepository(Store);
 
@@ -409,7 +409,7 @@ export class SeederService {
       });
 
       if (existing) {
-        this.logger.log(`  ⊙ Policy ya existe: ${policyData.name}`);
+        this.logger.log(`  ⊙ Policy already exists: ${policyData.name}`);
         continue;
       }
 
@@ -419,7 +419,7 @@ export class SeederService {
           where: { code: policyData.storeCode },
         });
         if (!store) {
-          this.logger.warn(`  ⚠ No se encontró store para policy: ${policyData.storeCode}`);
+          this.logger.warn(`  ⚠ Store not found for policy: ${policyData.storeCode}`);
         }
       }
 
@@ -428,12 +428,12 @@ export class SeederService {
         store: store || undefined,
       });
       await policyRepository.save(policy);
-      this.logger.log(`  ✓ Policy creada: ${policyData.name}`);
+      this.logger.log(`  ✓ Policy created: ${policyData.name}`);
     }
   }
 
   private async seedEmploymentTypeHoursPolicies(): Promise<void> {
-    this.logger.log(`Sembrando ${employmentTypeHoursSeed.length} reglas de horas por tipo de empleo...`);
+    this.logger.log(`Seeding ${employmentTypeHoursSeed.length} employment type hours rules...`);
     const policyRepository = this.dataSource.getRepository(SchedulingPolicy);
     const ruleRepository = this.dataSource.getRepository(EmploymentTypeHoursPolicy);
 
@@ -444,7 +444,7 @@ export class SeederService {
 
       if (!policy) {
         this.logger.warn(
-          `  ⚠ No se encontró policy ${ruleData.policyName} para employmentType ${ruleData.employmentType}`,
+          `  ⚠ Policy ${ruleData.policyName} not found for employmentType ${ruleData.employmentType}`,
         );
         continue;
       }
@@ -457,7 +457,7 @@ export class SeederService {
       });
 
       if (existing) {
-        this.logger.log(`  ⊙ Regla ya existe: ${ruleData.policyName} - ${ruleData.employmentType}`);
+        this.logger.log(`  ⊙ Rule already exists: ${ruleData.policyName} - ${ruleData.employmentType}`);
         continue;
       }
 
@@ -468,12 +468,12 @@ export class SeederService {
         maxHoursWeek: ruleData.maxHoursWeek,
       });
       await ruleRepository.save(rule);
-      this.logger.log(`  ✓ Regla creada: ${ruleData.policyName} - ${ruleData.employmentType}`);
+      this.logger.log(`  ✓ Rule created: ${ruleData.policyName} - ${ruleData.employmentType}`);
     }
   }
 
   private async seedPenaltyRules(): Promise<void> {
-    this.logger.log(`Sembrando ${penaltyRulesSeed.length} penalty rules...`);
+    this.logger.log(`Seeding ${penaltyRulesSeed.length} penalty rules...`);
     const repo = this.dataSource.getRepository(PenaltyRule);
 
     for (const rule of penaltyRulesSeed) {
@@ -488,7 +488,7 @@ export class SeederService {
       });
 
       if (existing) {
-        this.logger.log(`  ⊙ Regla ya existe: ${rule.description ?? 'sin desc'}`);
+        this.logger.log(`  ⊙ Rule already exists: ${rule.description ?? 'no desc'}`);
         continue;
       }
 
@@ -502,7 +502,7 @@ export class SeederService {
         description: rule.description,
       });
       await repo.save(entity);
-      this.logger.log(`  ✓ Regla creada: ${rule.description ?? 'sin desc'}`);
+      this.logger.log(`  ✓ Rule created: ${rule.description ?? 'no desc'}`);
     }
   }
 }

@@ -1,72 +1,72 @@
 /**
- * Definiciones de Shift Codes para McDonald's Australia
+ * Shift Code Definitions for McDonald's Australia
  *
- * Los shift codes representan los horarios estándar que los empleados
- * pueden declarar como disponibilidad.
+ * Shift codes represent the standard schedules that employees
+ * can declare as availability.
  *
- * Códigos comunes:
- * - 1F: Turno mañana (First shift)
- * - 2F: Turno tarde (Second shift)
- * - 3F: Turno largo/split
- * - SC: Turno corto central
- * - S: Turno corto mañana
+ * Common codes:
+ * - 1F: Morning shift (First shift)
+ * - 2F: Afternoon shift (Second shift)
+ * - 3F: Long/split shift
+ * - SC: Central short shift
+ * - S: Morning short shift
  */
 
 export interface ShiftCodeDefinition {
-  /** Hora de inicio en formato HH:mm */
+  /** Start time in HH:mm format */
   startTime: string;
-  /** Hora de fin en formato HH:mm */
+  /** End time in HH:mm format */
   endTime: string;
-  /** Duración en horas */
+  /** Duration in hours */
   hours: number;
-  /** Descripción del turno */
+  /** Shift description */
   description?: string;
 }
 
 /**
- * Mapeo de códigos de turno a sus horarios
- * Fuente: seed data de shift-codes.seed.ts
+ * Mapping of shift codes to their schedules
+ * Source: seed data from shift-codes.seed.ts
  */
 export const SHIFT_CODE_TIMES: Record<string, ShiftCodeDefinition> = {
   '1F': {
     startTime: '06:30',
     endTime: '15:30',
     hours: 9,
-    description: 'Turno mañana completo',
+    description: 'Full morning shift',
   },
   '2F': {
     startTime: '14:00',
     endTime: '23:00',
     hours: 9,
-    description: 'Turno tarde completo',
+    description: 'Full afternoon shift',
   },
   '3F': {
     startTime: '08:00',
     endTime: '20:00',
     hours: 12,
-    description: 'Turno largo',
+    description: 'Long shift',
   },
   SC: {
     startTime: '11:00',
     endTime: '20:00',
     hours: 9,
-    description: 'Turno central',
+    description: 'Central shift',
   },
   S: {
     startTime: '06:30',
     endTime: '15:00',
     hours: 8.5,
-    description: 'Turno corto mañana',
+    description: 'Short morning shift',
   },
 };
 
 /**
- * Códigos que indican no disponibilidad
+ * Codes that indicate unavailability
  */
 export const UNAVAILABLE_CODES = ['/', 'NA', 'OFF', 'X'] as const;
 
 /**
- * Verifica si un shift code representa disponibilidad
+ * Checks if a shift code represents availability
  */
 export function isAvailableShiftCode(code: string | null | undefined): boolean {
   if (!code) return false;
@@ -74,8 +74,8 @@ export function isAvailableShiftCode(code: string | null | undefined): boolean {
 }
 
 /**
- * Obtiene los tiempos de un shift code
- * @returns Los tiempos del turno o null si el código no existe o es no disponible
+ * Gets the times for a shift code
+ * @returns The shift times or null if code doesn't exist or is unavailable
  */
 export function getShiftCodeTimes(code: string | null | undefined): ShiftCodeDefinition | null {
   if (!code || !isAvailableShiftCode(code)) return null;

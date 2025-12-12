@@ -2,32 +2,32 @@ import { IsUUID, IsDateString, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateEmployeeAvailabilityDto {
-  @ApiProperty({ description: 'ID del empleado' })
+  @ApiProperty({ description: 'Employee ID' })
   @IsUUID()
   employeeId: string;
 
-  @ApiProperty({ description: 'ID del período de programación' })
+  @ApiProperty({ description: 'Schedule period ID' })
   @IsUUID()
   schedulePeriodId: string;
 
-  @ApiProperty({ description: 'ID de la tienda' })
+  @ApiProperty({ description: 'Store ID' })
   @IsUUID()
   storeId: string;
 
-  @ApiProperty({ description: 'Fecha de disponibilidad', example: '2024-12-15' })
+  @ApiProperty({ description: 'Availability date', example: '2024-12-15' })
   @IsDateString()
   date: string;
 
-  @ApiProperty({ description: 'ID del código de turno' })
+  @ApiProperty({ description: 'Shift code ID' })
   @IsUUID()
   shiftCodeId: string;
 
-  @ApiPropertyOptional({ description: 'ID de la estación' })
+  @ApiPropertyOptional({ description: 'Station ID' })
   @IsOptional()
   @IsUUID()
   stationId?: string;
 
-  @ApiPropertyOptional({ description: 'Notas adicionales' })
+  @ApiPropertyOptional({ description: 'Additional notes' })
   @IsOptional()
   @IsString()
   notes?: string;

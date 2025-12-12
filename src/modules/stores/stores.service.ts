@@ -13,13 +13,13 @@ export class StoresService {
   ) {}
 
   async create(createStoreDto: CreateStoreDto): Promise<Store> {
-    // Verificar si el código ya existe
+    // Check if code already exists
     const existingStore = await this.storeRepository.findOne({
       where: { code: createStoreDto.code },
     });
 
     if (existingStore) {
-      throw new ConflictException(`La tienda con código "${createStoreDto.code}" ya existe`);
+      throw new ConflictException(`Store with code "${createStoreDto.code}" already exists`);
     }
 
     const store = this.storeRepository.create(createStoreDto);
@@ -39,7 +39,7 @@ export class StoresService {
     });
 
     if (!store) {
-      throw new NotFoundException(`Tienda con ID "${id}" no encontrada`);
+      throw new NotFoundException(`Store with ID "${id}" not found`);
     }
 
     return store;
@@ -48,14 +48,14 @@ export class StoresService {
   async update(id: string, updateStoreDto: UpdateStoreDto): Promise<Store> {
     const store = await this.findOne(id);
 
-    // Si se está actualizando el código, verificar que no exista otro con el mismo código
+    // If updating code, verify no other store has it
     if (updateStoreDto.code && updateStoreDto.code !== store.code) {
       const existingStore = await this.storeRepository.findOne({
         where: { code: updateStoreDto.code },
       });
 
       if (existingStore) {
-        throw new ConflictException(`La tienda con código "${updateStoreDto.code}" ya existe`);
+        throw new ConflictException(`Store with code "${updateStoreDto.code}" already exists`);
       }
     }
 

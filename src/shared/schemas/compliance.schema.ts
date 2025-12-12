@@ -19,7 +19,7 @@ export const ComplianceSuggestionSchema = z.object({
       newEmployeeId: z.string().optional(),
     })
     .optional(),
-  relatedIssue: z.string().optional(), // Código del issue que origina esta sugerencia
+  relatedIssue: z.string().optional(), // Issue code that originated this suggestion
 });
 
 export const ComplianceResultSchema = z.object({

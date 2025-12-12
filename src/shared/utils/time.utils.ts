@@ -1,13 +1,13 @@
 /**
- * Utilidades de tiempo compartidas entre workers
- * Centralizadas para evitar duplicación de código (DRY)
+ * Shared time utilities between workers
+ * Centralized to avoid code duplication (DRY)
  */
 
 /**
- * Calcula las horas entre dos timestamps ISO
- * @param startIso - Timestamp de inicio en formato ISO
- * @param endIso - Timestamp de fin en formato ISO
- * @returns Número de horas entre los dos timestamps (mínimo 0)
+ * Calculates hours between two ISO timestamps
+ * @param startIso - Start timestamp in ISO format
+ * @param endIso - End timestamp in ISO format
+ * @returns Number of hours between the two timestamps (minimum 0)
  */
 export function hoursBetween(startIso: string, endIso: string): number {
   const start = new Date(startIso).getTime();
@@ -16,10 +16,10 @@ export function hoursBetween(startIso: string, endIso: string): number {
 }
 
 /**
- * Añade horas a un timestamp ISO
- * @param isoString - Timestamp base en formato ISO
- * @param hours - Horas a añadir (puede ser negativo)
- * @returns Nuevo timestamp ISO
+ * Adds hours to an ISO timestamp
+ * @param isoString - Base timestamp in ISO format
+ * @param hours - Hours to add (can be negative)
+ * @returns New ISO timestamp
  */
 export function addHoursToIso(isoString: string, hours: number): string {
   const date = new Date(isoString);
@@ -28,37 +28,37 @@ export function addHoursToIso(isoString: string, hours: number): string {
 }
 
 /**
- * Obtiene el día de la semana de un timestamp ISO
- * @param isoString - Timestamp en formato ISO
- * @returns Día de la semana (0=Domingo, 1=Lunes, ..., 6=Sábado)
+ * Gets the day of the week from an ISO timestamp
+ * @param isoString - Timestamp in ISO format
+ * @returns Day of week (0=Sunday, 1=Monday, ..., 6=Saturday)
  */
 export function getDayOfWeek(isoString: string): number {
   return new Date(isoString).getUTCDay();
 }
 
 /**
- * Extrae la hora del timestamp ISO
- * @param isoString - Timestamp en formato ISO
- * @returns Hora en formato HH:mm:ss
+ * Extracts time from ISO timestamp
+ * @param isoString - Timestamp in ISO format
+ * @returns Time in HH:mm:ss format
  */
 export function getTimeString(isoString: string): string {
   return isoString.split('T')[1]?.split('.')[0] ?? '00:00:00';
 }
 
 /**
- * Extrae la fecha del timestamp ISO
- * @param isoString - Timestamp en formato ISO
- * @returns Fecha en formato YYYY-MM-DD
+ * Extracts date from ISO timestamp
+ * @param isoString - Timestamp in ISO format
+ * @returns Date in YYYY-MM-DD format
  */
 export function getDateString(isoString: string): string {
   return isoString.split('T')[0];
 }
 
 /**
- * Añade días a una fecha
- * @param dateStr - Fecha en formato YYYY-MM-DD o ISO
- * @param days - Días a añadir (puede ser negativo)
- * @returns Nueva fecha en formato YYYY-MM-DD
+ * Adds days to a date
+ * @param dateStr - Date in YYYY-MM-DD or ISO format
+ * @param days - Days to add (can be negative)
+ * @returns New date in YYYY-MM-DD format
  */
 export function addDays(dateStr: string, days: number): string {
   const date = new Date(dateStr);
@@ -67,8 +67,8 @@ export function addDays(dateStr: string, days: number): string {
 }
 
 /**
- * Verifica si dos rangos de tiempo se solapan
- * @returns true si hay solapamiento
+ * Checks if two time ranges overlap
+ * @returns true if there is overlap
  */
 export function timeRangesOverlap(
   start1: string,

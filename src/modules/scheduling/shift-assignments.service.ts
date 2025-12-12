@@ -28,43 +28,43 @@ export class ShiftAssignmentsService {
   ) {}
 
   async create(createAssignmentDto: CreateShiftAssignmentDto): Promise<ShiftAssignment> {
-    // Verificar todas las relaciones
+    // Verify all relationships
     const employee = await this.employeeRepository.findOne({
       where: { id: createAssignmentDto.employeeId, isActive: true },
     });
     if (!employee) {
-      throw new NotFoundException(`Empleado con ID "${createAssignmentDto.employeeId}" no encontrado`);
+      throw new NotFoundException(`Employee with ID "${createAssignmentDto.employeeId}" not found`);
     }
 
     const schedulePeriod = await this.schedulePeriodRepository.findOne({
       where: { id: createAssignmentDto.schedulePeriodId, isActive: true },
     });
     if (!schedulePeriod) {
-      throw new NotFoundException(`Período con ID "${createAssignmentDto.schedulePeriodId}" no encontrado`);
+      throw new NotFoundException(`Schedule period with ID "${createAssignmentDto.schedulePeriodId}" not found`);
     }
 
     const store = await this.storeRepository.findOne({
       where: { id: createAssignmentDto.storeId, isActive: true },
     });
     if (!store) {
-      throw new NotFoundException(`Tienda con ID "${createAssignmentDto.storeId}" no encontrada`);
+      throw new NotFoundException(`Store with ID "${createAssignmentDto.storeId}" not found`);
     }
 
     const shiftCode = await this.shiftCodeRepository.findOne({
       where: { id: createAssignmentDto.shiftCodeId, isActive: true },
     });
     if (!shiftCode) {
-      throw new NotFoundException(`Código de turno con ID "${createAssignmentDto.shiftCodeId}" no encontrado`);
+      throw new NotFoundException(`Shift code with ID "${createAssignmentDto.shiftCodeId}" not found`);
     }
 
     const station = await this.stationRepository.findOne({
       where: { id: createAssignmentDto.stationId, isActive: true },
     });
     if (!station) {
-      throw new NotFoundException(`Estación con ID "${createAssignmentDto.stationId}" no encontrada`);
+      throw new NotFoundException(`Station with ID "${createAssignmentDto.stationId}" not found`);
     }
 
-    // Verificar unicidad
+    // Check uniqueness
     const existingAssignment = await this.assignmentRepository.findOne({
       where: {
         employee: { id: createAssignmentDto.employeeId },
@@ -75,7 +75,7 @@ export class ShiftAssignmentsService {
     });
 
     if (existingAssignment) {
-      throw new ConflictException('Ya existe una asignación para este empleado, fecha, código de turno y estación');
+      throw new ConflictException('An assignment already exists for this employee, date, shift code and station');
     }
 
     const assignment = this.assignmentRepository.create({
@@ -106,7 +106,7 @@ export class ShiftAssignmentsService {
     });
 
     if (!assignment) {
-      throw new NotFoundException(`Asignación con ID "${id}" no encontrada`);
+      throw new NotFoundException(`Assignment with ID "${id}" not found`);
     }
 
     return assignment;
@@ -115,43 +115,43 @@ export class ShiftAssignmentsService {
   async update(id: string, updateAssignmentDto: UpdateShiftAssignmentDto): Promise<ShiftAssignment> {
     const assignment = await this.findOne(id);
 
-    // Verificar relaciones si se actualizan
+    // Verify relationships if updating
     if (updateAssignmentDto.employeeId) {
       const employee = await this.employeeRepository.findOne({
         where: { id: updateAssignmentDto.employeeId, isActive: true },
       });
-      if (!employee) throw new NotFoundException(`Empleado no encontrado`);
+      if (!employee) throw new NotFoundException(`Employee not found`);
     }
 
     if (updateAssignmentDto.schedulePeriodId) {
       const schedulePeriod = await this.schedulePeriodRepository.findOne({
         where: { id: updateAssignmentDto.schedulePeriodId, isActive: true },
       });
-      if (!schedulePeriod) throw new NotFoundException(`Período no encontrado`);
+      if (!schedulePeriod) throw new NotFoundException(`Schedule period not found`);
     }
 
     if (updateAssignmentDto.storeId) {
       const store = await this.storeRepository.findOne({
         where: { id: updateAssignmentDto.storeId, isActive: true },
       });
-      if (!store) throw new NotFoundException(`Tienda no encontrada`);
+      if (!store) throw new NotFoundException(`Store not found`);
     }
 
     if (updateAssignmentDto.shiftCodeId) {
       const shiftCode = await this.shiftCodeRepository.findOne({
         where: { id: updateAssignmentDto.shiftCodeId, isActive: true },
       });
-      if (!shiftCode) throw new NotFoundException(`Código de turno no encontrado`);
+      if (!shiftCode) throw new NotFoundException(`Shift code not found`);
     }
 
     if (updateAssignmentDto.stationId) {
       const station = await this.stationRepository.findOne({
         where: { id: updateAssignmentDto.stationId, isActive: true },
       });
-      if (!station) throw new NotFoundException(`Estación no encontrada`);
+      if (!station) throw new NotFoundException(`Station not found`);
     }
 
-    // Verificar unicidad
+    // Check uniqueness
     if (
       updateAssignmentDto.employeeId ||
       updateAssignmentDto.date ||
@@ -173,11 +173,11 @@ export class ShiftAssignmentsService {
       });
 
       if (existingAssignment && existingAssignment.id !== id) {
-        throw new ConflictException('Ya existe una asignación para esta combinación');
+        throw new ConflictException('An assignment already exists for this combination');
       }
     }
 
-    // Actualizar campos
+    // Update fields
     if (updateAssignmentDto.employeeId) {
       assignment.employee = { id: updateAssignmentDto.employeeId } as Employee;
     }

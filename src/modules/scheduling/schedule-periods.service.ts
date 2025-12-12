@@ -16,21 +16,21 @@ export class SchedulePeriodsService {
   ) {}
 
   async create(createSchedulePeriodDto: CreateSchedulePeriodDto): Promise<SchedulePeriod> {
-    // Verificar que la tienda existe
+    // Verify store exists
     const store = await this.storeRepository.findOne({
       where: { id: createSchedulePeriodDto.storeId, isActive: true },
     });
 
     if (!store) {
-      throw new NotFoundException(`Tienda con ID "${createSchedulePeriodDto.storeId}" no encontrada`);
+      throw new NotFoundException(`Store with ID "${createSchedulePeriodDto.storeId}" not found`);
     }
 
     const startDate = new Date(createSchedulePeriodDto.startDate);
     const endDate = new Date(createSchedulePeriodDto.endDate);
 
-    // Verificar que la fecha de inicio sea anterior a la fecha de fin
+    // Verify start date is before end date
     if (startDate >= endDate) {
-      throw new BadRequestException('La fecha de inicio debe ser anterior a la fecha de fin');
+      throw new BadRequestException('Start date must be before end date');
     }
 
     const schedulePeriod = this.schedulePeriodRepository.create({
@@ -58,7 +58,7 @@ export class SchedulePeriodsService {
     });
 
     if (!schedulePeriod) {
-      throw new NotFoundException(`Período de programación con ID "${id}" no encontrado`);
+      throw new NotFoundException(`Schedule period with ID "${id}" not found`);
     }
 
     return schedulePeriod;
@@ -67,18 +67,18 @@ export class SchedulePeriodsService {
   async update(id: string, updateSchedulePeriodDto: UpdateSchedulePeriodDto): Promise<SchedulePeriod> {
     const schedulePeriod = await this.findOne(id);
 
-    // Verificar tienda si se actualiza
+    // Verify store if updating
     if (updateSchedulePeriodDto.storeId) {
       const store = await this.storeRepository.findOne({
         where: { id: updateSchedulePeriodDto.storeId, isActive: true },
       });
 
       if (!store) {
-        throw new NotFoundException(`Tienda con ID "${updateSchedulePeriodDto.storeId}" no encontrada`);
+        throw new NotFoundException(`Store with ID "${updateSchedulePeriodDto.storeId}" not found`);
       }
     }
 
-    // Validar fechas si se actualizan
+    // Validate dates if updating
     const startDate = updateSchedulePeriodDto.startDate
       ? new Date(updateSchedulePeriodDto.startDate)
       : schedulePeriod.startDate;
@@ -87,7 +87,7 @@ export class SchedulePeriodsService {
       : schedulePeriod.endDate;
 
     if (startDate >= endDate) {
-      throw new BadRequestException('La fecha de inicio debe ser anterior a la fecha de fin');
+      throw new BadRequestException('Start date must be before end date');
     }
 
     if (updateSchedulePeriodDto.storeId) {

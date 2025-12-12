@@ -6,7 +6,7 @@ import {
 } from './employee.schema';
 
 /**
- * Schema para requerimientos de staff por estación
+ * Schema for staff requirements by station
  */
 export const StaffRequirementSchema = z.object({
   stationId: z.string(),
@@ -16,8 +16,8 @@ export const StaffRequirementSchema = z.object({
 });
 
 /**
- * Contexto completo necesario para generar un roster
- * Incluye toda la información de la DB que el RosterWorker necesita
+ * Complete context needed to generate a roster
+ * Includes all DB information that RosterWorker needs
  */
 export const RosterContextSchema = z.object({
   storeId: z.string(),
@@ -30,7 +30,7 @@ export const RosterContextSchema = z.object({
 });
 
 /**
- * Métricas de coverage para un roster generado
+ * Coverage metrics for a generated roster
  */
 export const CoverageMetricsSchema = z.object({
   totalShifts: z.number(),

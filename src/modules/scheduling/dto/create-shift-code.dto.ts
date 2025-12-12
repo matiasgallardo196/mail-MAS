@@ -2,41 +2,41 @@ import { IsString, IsOptional, IsBoolean, IsNumber, Min } from 'class-validator'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateShiftCodeDto {
-  @ApiProperty({ description: 'Código único del turno', example: 'S' })
+  @ApiProperty({ description: 'Unique shift code', example: 'S' })
   @IsString()
   code: string;
 
-  @ApiProperty({ description: 'Nombre del turno', example: 'Day Shift' })
+  @ApiProperty({ description: 'Shift name', example: 'Day Shift' })
   @IsString()
   shiftName: string;
 
-  @ApiPropertyOptional({ description: 'Hora de inicio', example: '06:00:00' })
+  @ApiPropertyOptional({ description: 'Start time', example: '06:00:00' })
   @IsOptional()
   @IsString()
   startTime?: string;
 
-  @ApiPropertyOptional({ description: 'Hora de fin', example: '14:00:00' })
+  @ApiPropertyOptional({ description: 'End time', example: '14:00:00' })
   @IsOptional()
   @IsString()
   endTime?: string;
 
-  @ApiPropertyOptional({ description: 'Número de horas', example: 8 })
+  @ApiPropertyOptional({ description: 'Number of hours', example: 8 })
   @IsOptional()
   @IsNumber()
   @Min(0)
   hours?: number;
 
-  @ApiPropertyOptional({ description: 'Descripción del turno' })
+  @ApiPropertyOptional({ description: 'Shift description' })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Si el turno está disponible', default: true })
+  @ApiPropertyOptional({ description: 'Whether the shift is available', default: true })
   @IsOptional()
   @IsBoolean()
   isAvailable?: boolean;
 
-  @ApiPropertyOptional({ description: 'Si es un turno de gestión', default: false })
+  @ApiPropertyOptional({ description: 'Whether it is a management shift', default: false })
   @IsOptional()
   @IsBoolean()
   isManagement?: boolean;

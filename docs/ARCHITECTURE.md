@@ -1,6 +1,6 @@
 # Project Architecture
 
-This document describes the architecture, structure, and organization of the NestJS boilerplate.
+This document describes the architecture, structure, and organization of the McDonald's Workforce Scheduling MAS (Multi-Agent System).
 
 ---
 
@@ -9,13 +9,16 @@ This document describes the architecture, structure, and organization of the Nes
 - **Node.js 18+** - JavaScript runtime
 - **NestJS 11** - Node.js framework based on Express
 - **TypeScript** - Programming language
+- **OpenAI Agents SDK** (`@openai/agents`) - Multi-Agent orchestration framework
+- **PostgreSQL** - Relational database
+- **TypeORM** - Object-Relational Mapping
+- **Zod** - Runtime schema validation
 - **Pino** via `nestjs-pino` - Structured logging system
 - **class-transformer** - Object serialization and transformation
 - **class-validator** - DTO validation
 - **Helmet** - HTTP security headers
 - **@nestjs/throttler** - Rate limiting and attack protection
 - **Swagger** (`@nestjs/swagger`) - Automatic API documentation
-- **dotenv** - Environment variable loading
 
 ---
 
@@ -26,191 +29,246 @@ src/
   ├── app.module.ts                    # Root module: global configuration
   ├── main.ts                          # Application bootstrap
   │
+  ├── agents/                          # Multi-Agent System (MAS)
+  │   ├── orchestrator.service.ts      # Main orchestrator coordinating all agents
+  │   ├── planner/
+  │   │   └── orchestration.planner.ts # Planning and task distribution
+  │   ├── workers/
+  │   │   ├── roster.worker.ts         # Initial roster generation
+  │   │   ├── compliance.worker.ts     # Fair Work compliance validation
+  │   │   ├── optimization.worker.ts   # Cost and coverage optimization
+  │   │   └── conflict.worker.ts       # Conflict resolution
+  │   └── tools/
+  │       ├── roster.tools.ts          # Roster manipulation tools
+  │       ├── fairwork.tools.ts        # Fair Work compliance tools
+  │       ├── employee.tools.ts        # Employee data tools
+  │       ├── store.tools.ts           # Store data tools
+  │       └── australian-holidays.ts   # Australian holiday calculations
+  │
   ├── config/
-  │   └── env.loader.ts                # Environment variable loading according to NODE_ENV
+  │   └── env.loader.ts                # Environment variable loading
   │
   ├── common/
   │   ├── logger/
-  │   │   └── logger.module.ts         # Central configuration of nestjs-pino
+  │   │   └── logger.module.ts         # Central Pino logging configuration
   │   ├── filters/
   │   │   └── all-exceptions.filter.ts # Global exception filter
   │   ├── interceptors/
-  │   │   └── response.interceptor.ts  # Global interceptor for formatting responses
+  │   │   └── response.interceptor.ts  # Response formatting interceptor
   │   ├── pipes/
-  │   │   └── app-validation.pipe.ts   # Global ValidationPipe with config by environment
-  │   ├── decorators/
-  │   │   └── skip-response-wrapper.decorator.ts  # Decorator to skip the response wrapper
-  │   ├── middleware/                  # (Empty - for future use)
-  │   └── utils/                       # (Empty - for future use)
+  │   │   └── app-validation.pipe.ts   # Global validation pipe
+  │   └── decorators/
+  │       └── skip-response-wrapper.decorator.ts
+  │
+  ├── db/
+  │   ├── database.module.ts           # TypeORM database configuration
+  │   ├── seeder.service.ts            # Database seeding service
+  │   ├── seed.command.ts              # Seed command runner
+  │   └── seeds/                       # Seed data files
   │
   ├── modules/
-  │   └── health/
-  │       ├── health.module.ts         # Health module
-  │       └── health.controller.ts     # GET /health endpoint
+  │   ├── employees/
+  │   │   ├── employee.module.ts
+  │   │   ├── employee.controller.ts
+  │   │   ├── employee.service.ts
+  │   │   └── entities/
+  │   │       ├── employee.entity.ts
+  │   │       ├── employee-availability.entity.ts
+  │   │       └── employee-skill.entity.ts
+  │   │
+  │   ├── stores/
+  │   │   ├── store.module.ts
+  │   │   ├── store.controller.ts
+  │   │   ├── store.service.ts
+  │   │   └── entities/
+  │   │       ├── store.entity.ts
+  │   │       ├── store-staff-requirement.entity.ts
+  │   │       └── store-operating-hours.entity.ts
+  │   │
+  │   ├── stations/
+  │   │   ├── stations.module.ts
+  │   │   ├── stations.controller.ts
+  │   │   ├── stations.service.ts
+  │   │   └── entities/station.entity.ts
+  │   │
+  │   ├── scheduling/
+  │   │   ├── scheduling.module.ts
+  │   │   ├── roster.controller.ts      # Roster generation endpoints
+  │   │   ├── schedule-periods.controller.ts
+  │   │   ├── schedule-periods.service.ts
+  │   │   ├── shift-assignments.controller.ts
+  │   │   ├── shift-assignments.service.ts
+  │   │   ├── shift-codes.controller.ts
+  │   │   ├── shift-codes.service.ts
+  │   │   └── entities/
+  │   │       ├── schedule-period.entity.ts
+  │   │       ├── shift-assignment.entity.ts
+  │   │       └── shift-code.entity.ts
+  │   │
+  │   ├── health/
+  │   │   ├── health.module.ts
+  │   │   └── health.controller.ts
+  │   │
+  │   └── openai/
+  │       └── openai.module.ts         # OpenAI SDK configuration
   │
   └── shared/
-      └── entities/                    # (Empty - for reusable DTOs, entities, etc.)
+      ├── schemas/                     # Zod validation schemas
+      │   ├── roster.schema.ts
+      │   ├── shift.schema.ts
+      │   ├── employee.schema.ts
+      │   ├── compliance.schema.ts
+      │   ├── optimization.schema.ts
+      │   ├── policy.schema.ts
+      │   └── roster-context.schema.ts
+      ├── types/                       # TypeScript type definitions
+      │   ├── agent.ts
+      │   ├── compliance.ts
+      │   ├── employee.ts
+      │   ├── optimization.ts
+      │   ├── roster.ts
+      │   ├── shift.ts
+      │   └── tool.ts
+      ├── constants/                   # Application constants
+      └── utils/                       # Utility functions
 ```
 
 ---
 
-## 📋 Main Components
+## 🤖 Multi-Agent System (MAS) Components
 
-### 1. `app.module.ts` - Root Module
+### 1. Orchestrator (`orchestrator.service.ts`)
 
-The main application module that configures:
+The central coordinator that manages the entire scheduling workflow:
 
-**Imports:**
-- `ThrottlerModule` - Rate limiting
-- `AppLoggerModule` - Logging system
-- `HealthModule` - Health check endpoint
+- Receives roster generation requests
+- Coordinates worker execution in sequence
+- Handles fallback mode when OpenAI is unavailable
+- Manages error recovery and retries
+- Tracks metrics and performance
 
-**Global Providers:**
+### 2. Planner (`orchestration.planner.ts`)
+
+Responsible for high-level task planning:
+
+- Analyzes scheduling requirements
+- Determines task priorities
+- Distributes work to appropriate workers
+
+### 3. Workers
+
+Specialized agents that perform specific tasks:
+
+| Worker | Responsibility |
+|--------|----------------|
+| **RosterWorker** | Generates initial shift assignments based on staff requirements |
+| **ComplianceWorker** | Validates roster against Fair Work regulations (rest periods, max hours, penalties) |
+| **OptimizationWorker** | Optimizes roster for cost efficiency and coverage balance |
+| **ConflictWorker** | Resolves scheduling conflicts and coverage gaps |
+
+### 4. Tools
+
+Functions that workers can invoke:
+
+| Tool | Description |
+|------|-------------|
+| `roster.tools.ts` | Create, modify, and validate rosters |
+| `fairwork.tools.ts` | Check rest periods, calculate penalty rates |
+| `employee.tools.ts` | Access employee availability and skills |
+| `store.tools.ts` | Retrieve store requirements and hours |
+| `australian-holidays.ts` | Calculate Australian public holidays |
+
+---
+
+## 🔄 MAS Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Orchestrator                              │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+    ┌───────────────────────┼───────────────────────┐
+    ▼                       ▼                       ▼
+┌─────────┐          ┌─────────────┐         ┌──────────────┐
+│ Planner │ ──────▶  │ RosterWorker│ ──────▶ │ComplianceWork│
+└─────────┘          └─────────────┘         └──────────────┘
+                            │                       │
+                            │                       ▼
+                            │               ┌──────────────┐
+                            │               │ Optimization │
+                            │               │    Worker    │
+                            │               └──────────────┘
+                            │                       │
+                            ▼                       ▼
+                     ┌─────────────┐         ┌──────────────┐
+                     │   Conflict  │ ◀────── │    Final     │
+                     │   Worker    │         │   Roster     │
+                     └─────────────┘         └──────────────┘
+```
+
+**Flow:**
+1. Orchestrator receives roster generation request
+2. Planner analyzes requirements and creates task plan
+3. RosterWorker generates initial roster based on staff requirements
+4. ComplianceWorker validates Fair Work compliance
+5. OptimizationWorker optimizes for cost and coverage
+6. ConflictWorker resolves any remaining issues
+7. Final roster is returned with metrics
+
+---
+
+## 📋 Main Modules
+
+### Scheduling Module
+Handles all roster and shift management:
+- Schedule periods (weekly/bi-weekly schedules)
+- Shift assignments (individual employee shifts)
+- Shift codes (shift templates like "MORNING", "AFTERNOON")
+
+### Employee Module
+Manages employee data:
+- Employee profiles (name, contract type, wages)
+- Availability schedules
+- Skills and certifications
+
+### Store Module
+Manages store configuration:
+- Store information
+- Operating hours
+- Staff requirements by time period
+
+### Station Module
+Manages work stations:
+- Station definitions (Kitchen, Counter, Drive-Thru, etc.)
+- Station requirements
+
+---
+
+## 🔐 Security & Infrastructure
+
+### Global Providers (app.module.ts)
+
 - `APP_FILTER` → `AllExceptionsFilter` - Global error handling
 - `APP_PIPE` → `AppValidationPipe` - Global DTO validation
 - `APP_INTERCEPTOR` → `ResponseInterceptor` - Response formatting
-- `APP_GUARD` → `ThrottlerGuard` - Rate limiting applied globally
+- `APP_GUARD` → `ThrottlerGuard` - Rate limiting
 
-These providers are automatically applied to all controllers and endpoints in the application.
-
-### 2. `main.ts` - Application Bootstrap
-
-Application entry point. Configures:
-
-1. **Logger** - Uses the nestjs-pino logger configured in `AppLoggerModule`
-2. **ClassSerializerInterceptor** - Global serialization with class-transformer
-3. **Helmet** - Security headers (CSP only in production)
-4. **Swagger** - API documentation (development only)
-5. **CORS** - Allowed origins configuration
-6. **Port** - Listens on the configured port (default: 3000)
-
-```12:17:src/main.ts
-  const app = await NestFactory.create(AppModule, {
-    bufferLogs: true,
-  });
-
-  // Logger configuration
-  const logger = app.get(Logger);
-  app.useLogger(logger);
-```
-
-### 3. `config/env.loader.ts` - Environment Variable Loading
-
-Custom system for loading environment variables according to `NODE_ENV`:
-
-- Reads `NODE_ENV` from `process.env` (default: `'development'`)
-- Loads the corresponding `.env.<NODE_ENV>` file (e.g., `.env.development`, `.env.production`)
-- Exports typed constants for use throughout the application
-
-**Exported constants:**
-- `NODE_ENV`, `IS_PRODUCTION`, `IS_DEVELOPMENT`, `IS_TEST`
-- `PORT` (default: 3000)
-- `DATABASE_URL`
-- `FRONTEND_URL`
-- `CORS_ORIGIN`
-- `LOGGER_LEVEL`
-- `FULL_LOGS` (boolean)
-- `RATE_LIMIT_TTL` (default: 60 seconds)
-- `RATE_LIMIT_LIMIT` (default: 100 requests)
-
-### 4. `common/logger/logger.module.ts` - Logging System
-
-Centralized configuration of `nestjs-pino`:
-
-**Features:**
-- Log level configurable by environment
-- Format: `pino-pretty` in development, JSON in production
-- Redaction of sensitive headers (authorization, cookie)
-- Verbosity control with `FULL_LOGS`
-
-### 5. `common/filters/all-exceptions.filter.ts` - Global Error Handling
-
-Filter that catches all unhandled exceptions:
-
-- Catches any type of exception (`@Catch()` without parameters)
-- Resolves status code and message according to error type
-- In production, hides internal details of 500 errors
-- Logs all information with Pino
-- Formats error responses consistently
-
-### 6. `common/interceptors/response.interceptor.ts` - Response Formatting
-
-Interceptor that wraps all successful responses in a standard format:
-
-- Adds `statusCode`, `data`, `path`, `method`, `requestId`, `timestamp`
-- Can be skipped using the `@SkipResponseWrapper()` decorator
-- Useful for maintaining consistency in API responses
-
-### 7. `common/pipes/app-validation.pipe.ts` - Global Validation
-
-ValidationPipe configured globally:
-
-**Base configuration:**
-- `whitelist: true` - Removes properties not defined in DTOs
-- `transform: true` - Automatically converts types
-- `enableImplicitConversion: true` - Implicit type conversion
-
-**By environment:**
-- **Development**: Detailed error messages, extra properties are removed (not rejected)
-- **Production**: Error messages hidden, extra properties cause 400 error
-
-### 8. `common/decorators/skip-response-wrapper.decorator.ts` - Custom Decorator
-
-Allows skipping the response wrapper from `ResponseInterceptor`:
-
-- Useful for endpoints like `/health` that need unwrapped responses
-- Applied at method or controller level
-- Used in `HealthController`
-
-### 9. `modules/health/` - Health Check
-
-Simple module that exposes a health endpoint:
-
-- `GET /health` - Returns status, uptime, and timestamp
-- Does not go through the response wrapper (uses `@SkipResponseWrapper()`)
-- Ideal for infrastructure monitoring (Docker, Kubernetes, etc.)
-
----
-
-## 🔄 Request Flow
+### Request Flow
 
 1. **Request arrives** → ThrottlerGuard checks rate limit
-2. **Passes rate limit** → AppValidationPipe validates DTOs (if applicable)
-3. **Validation OK** → Controller processes the request
-4. **Controller returns** → ResponseInterceptor wraps the response (if it doesn't have `@SkipResponseWrapper()`)
-5. **If there's an error** → AllExceptionsFilter catches and formats the error
-6. **Everything is logged** → AppLoggerModule records structured logs
-
----
-
-## 📦 Modules and Extensibility
-
-The project is ready to add new modules following this structure:
-
-```
-modules/
-  └── my-new-module/
-      ├── my-new-module.module.ts
-      ├── my-new-module.controller.ts
-      ├── my-new-module.service.ts
-      └── dto/
-          └── my-dto.ts
-```
-
-New modules must be imported in `app.module.ts` and automatically inherit:
-- Global validation
-- Error handling
-- Response formatting
-- Rate limiting
-- Structured logging
+2. **Passes rate limit** → AppValidationPipe validates DTOs
+3. **Validation OK** → Controller processes request
+4. **Controller returns** → ResponseInterceptor wraps response
+5. **If error** → AllExceptionsFilter catches and formats error
+6. **Logging** → AppLoggerModule records structured logs
 
 ---
 
 ## 🎯 Conventions
 
 - **DTOs**: Use `class-validator` decorators for validation
-- **Responses**: The `ResponseInterceptor` automatically wraps them
+- **Schemas**: Use Zod for runtime validation in MAS
+- **Responses**: `ResponseInterceptor` automatically wraps them
 - **Errors**: Throw `HttpException` or its derivatives
-- **Logging**: Use the injected `Logger` from `nestjs-pino`
-- **Environment variables**: Define in `env.loader.ts` and use from there
-
+- **Logging**: Use injected `Logger` from `nestjs-pino`
+- **Environment**: Define in `env.loader.ts` and use from there

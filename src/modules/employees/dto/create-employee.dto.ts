@@ -3,32 +3,32 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EmploymentType, EmployeeRole } from '../../../common/enums/enums';
 
 export class CreateEmployeeDto {
-  @ApiProperty({ description: 'Código externo único del empleado', example: 1001 })
+  @ApiProperty({ description: 'Unique external employee code', example: 1001 })
   @IsInt()
   @Min(1)
   externalCode: number;
 
-  @ApiProperty({ description: 'Nombre del empleado' })
+  @ApiProperty({ description: 'Employee first name' })
   @IsString()
   firstName: string;
 
-  @ApiProperty({ description: 'Apellido del empleado' })
+  @ApiProperty({ description: 'Employee last name' })
   @IsString()
   lastName: string;
 
-  @ApiProperty({ description: 'Tipo de empleo', enum: EmploymentType })
+  @ApiProperty({ description: 'Employment type', enum: EmploymentType })
   @IsEnum(EmploymentType)
   employmentType: EmploymentType;
 
-  @ApiProperty({ description: 'Rol del empleado', enum: EmployeeRole })
+  @ApiProperty({ description: 'Employee role', enum: EmployeeRole })
   @IsEnum(EmployeeRole)
   role: EmployeeRole;
 
-  @ApiProperty({ description: 'ID de la tienda por defecto' })
+  @ApiProperty({ description: 'Default store ID' })
   @IsUUID()
   defaultStoreId: string;
 
-  @ApiPropertyOptional({ description: 'ID de la estación por defecto' })
+  @ApiPropertyOptional({ description: 'Default station ID' })
   @IsOptional()
   @IsUUID()
   defaultStationId?: string;

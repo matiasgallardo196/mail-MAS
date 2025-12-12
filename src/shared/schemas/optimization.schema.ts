@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { RosterSchema } from './roster.schema';
 import { ComplianceSuggestionSchema, ComplianceIssueSchema } from './compliance.schema';
 
-// --- Constraints que el OptimizationWorker debe respetar ---
+// --- Constraints that OptimizationWorker must respect ---
 export const OptimizationConstraintsSchema = z.object({
   minHoursBetweenShifts: z.number().default(10),
   minShiftHours: z.number().default(3),
@@ -10,7 +10,7 @@ export const OptimizationConstraintsSchema = z.object({
   maxHoursPerWeek: z.record(z.string(), z.number()).optional(), // { employeeId: maxHours }
 });
 
-// --- Input del OptimizationWorker ---
+// --- OptimizationWorker Input ---
 // Note: penaltyRules uses z.any() to avoid type conflicts between different PenaltyRule schemas
 // The actual validation happens at runtime via fairwork.tools
 // Note: Using passthrough() to preserve complianceValidator function that Orchestrator injects
@@ -25,40 +25,40 @@ export const OptimizationInputSchema = z
         }),
       )
       .optional(),
-    // Feedback de ComplianceWorker
+    // ComplianceWorker feedback
     complianceFeedback: z
       .object({
         issues: z.array(ComplianceIssueSchema).optional(),
         suggestions: z.array(ComplianceSuggestionSchema).optional(),
       })
       .optional(),
-    // Constraints a respetar
+    // Constraints to respect
     constraints: OptimizationConstraintsSchema.optional(),
-    // Penalty rules para calcular costos (type checked at runtime)
+    // Penalty rules for cost calculation (type checked at runtime)
     penaltyRules: z.array(z.any()).optional(),
-    // Si es un retry, ser más conservador
+    // If retry, be more conservative
     isRetry: z.boolean().optional(),
-    // Estado australiano para detectar feriados locales (default: VIC)
+    // Australian state to detect local holidays (default: VIC)
     australianState: z.string().optional(),
   })
   .passthrough(); // Preserves complianceValidator function
 
-// --- Registro de una optimización aplicada ---
+// --- Applied optimization record ---
 export const AppliedOptimizationSchema = z.object({
   type: z.enum([
-    'APPLIED_SUGGESTION', // Aplicó una sugerencia de ComplianceWorker
-    'MOVED_SHIFT', // Movió un turno a horario más barato
-    'SWAPPED_SHIFTS', // Intercambió turnos entre empleados
-    'BALANCED_HOURS', // Balanceó horas entre empleados
+    'APPLIED_SUGGESTION', // Applied a ComplianceWorker suggestion
+    'MOVED_SHIFT', // Moved a shift to cheaper time
+    'SWAPPED_SHIFTS', // Swapped shifts between employees
+    'BALANCED_HOURS', // Balanced hours between employees
   ]),
   description: z.string(),
   shiftIndex: z.number().optional(),
   employeeId: z.string().optional(),
-  fromSuggestion: z.string().optional(), // ID del issue que generó la sugerencia
-  costImpact: z.number().optional(), // Positivo = ahorro, negativo = aumento
+  fromSuggestion: z.string().optional(), // ID of the issue that generated the suggestion
+  costImpact: z.number().optional(), // Positive = savings, negative = increase
 });
 
-// --- Métricas de la optimización ---
+// --- Optimization metrics ---
 export const OptimizationMetricsSchema = z.object({
   relativeCostBefore: z.number(),
   relativeCostAfter: z.number(),
@@ -69,16 +69,16 @@ export const OptimizationMetricsSchema = z.object({
   additionalOptimizations: z.number(),
 });
 
-// --- Output del OptimizationWorker ---
+// --- OptimizationWorker Output ---
 export const OptimizationResultSchema = z.object({
   roster: RosterSchema,
   appliedChanges: z.array(AppliedOptimizationSchema),
   metrics: OptimizationMetricsSchema,
-  // Score de optimización (0-100)
+  // Optimization score (0-100)
   score: z.number().min(0).max(100),
 });
 
-// Types derivados
+// Derived types
 export type OptimizationConstraints = z.infer<typeof OptimizationConstraintsSchema>;
 export type OptimizationInput = z.infer<typeof OptimizationInputSchema>;
 export type AppliedOptimization = z.infer<typeof AppliedOptimizationSchema>;

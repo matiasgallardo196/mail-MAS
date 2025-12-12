@@ -22,7 +22,7 @@ import { z } from 'zod';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { Agent, run, tool } = require('@openai/agents');
 /**
- * Mensaje del trace de comunicación entre agents
+ * Communication trace message between agents
  */
 export interface AgentMessage {
   timestamp: string;
@@ -33,12 +33,12 @@ export interface AgentMessage {
 }
 
 /**
- * Función para añadir entries al trace
+ * Function to add entries to the trace
  */
 type TraceFunction = (from: string, to: string, action: string, data?: unknown) => void;
 
 /**
- * Resultado final del orchestrator con trace de colaboración
+ * Final result from orchestrator with collaboration trace
  */
 export interface OrchestrationResult {
   status: 'ok' | 'requires_human_review' | 'optimization_failed' | 'partial';
@@ -59,7 +59,7 @@ export interface OrchestrationResult {
 }
 
 /**
- * Constraints para optimización
+ * Constraints for optimization
  */
 interface OptimizationConstraints {
   minHoursBetweenShifts: number;
@@ -68,20 +68,20 @@ interface OptimizationConstraints {
 }
 
 /**
- * SchedulingOrchestrator - Coordina la colaboración entre agents
+ * SchedulingOrchestrator - Coordinates collaboration between agents
  *
- * Flujo de colaboración (4 agents):
- * 1. RosterWorker → genera roster inicial + detecta coverage gaps
- * 2. ComplianceWorker → valida Fair Work y genera suggestions
- * 3. ConflictWorker → aplica suggestions + resuelve coverage gaps
- * 4. OptimizationWorker → optimiza costos (consultando a ComplianceWorker)
- * 5. ComplianceWorker → validación final (confirmación)
+ * Collaboration flow (4 agents):
+ * 1. RosterWorker → generates initial roster + detects coverage gaps
+ * 2. ComplianceWorker → validates Fair Work and generates suggestions
+ * 3. ConflictWorker → applies suggestions + resolves coverage gaps
+ * 4. OptimizationWorker → optimizes costs (querying ComplianceWorker)
+ * 5. ComplianceWorker → final validation (confirmation)
  *
- * La clave es que cada agent tiene una responsabilidad clara:
- * - RosterWorker: Generación inicial
- * - ComplianceWorker: Validación legal
- * - ConflictWorker: Resolución de problemas
- * - OptimizationWorker: Mejora de costos
+ * The key is that each agent has a clear responsibility:
+ * - RosterWorker: Initial generation
+ * - ComplianceWorker: Legal validation
+ * - ConflictWorker: Problem resolution
+ * - OptimizationWorker: Cost improvement
  */
 @Injectable()
 export class SchedulingOrchestrator {
@@ -100,8 +100,8 @@ export class SchedulingOrchestrator {
   }
 
   /**
-   * Genera un roster optimizado con validación de compliance y resolución de conflictos
-   * Implementa el flujo de colaboración entre 4 agents
+   * Generates an optimized roster with compliance validation and conflict resolution
+   * Implements the collaboration flow between 4 agents
    */
   async generateRoster(storeId: string, weekStart: Date): Promise<OrchestrationResult> {
     const startTime = Date.now();
@@ -119,23 +119,23 @@ export class SchedulingOrchestrator {
       });
     };
 
-    // Variables para partial recovery
+    // Variables for partial recovery
     let workingRoster: Roster | null = null;
     let employeeContracts: EmployeeContract[] = [];
     let lastSuccessfulPhase = 'none';
     let lastError: string | undefined;
 
     try {
-      // Si tenemos el SDK de OpenAI agents, lo usamos pero con logging
-      // TODO: Cuando el SDK esté integrado, implementar adapter para trace
+      // If we have the OpenAI agents SDK, we use it but with logging
+      // TODO: When SDK is integrated, implement adapter for trace
       if (this.orchestrator) {
         this.logger.log('SDK available but using fallback for complete agent trace');
       }
 
-      // --- FALLBACK: Flujo de colaboración manual (5 pasos) ---
+      // --- FALLBACK: Manual collaboration flow (5 steps) ---
 
       // ═══════════════════════════════════════════════════════════════
-      // PASO 1: RosterWorker - Generación inicial
+      // STEP 1: RosterWorker - Initial generation
       // ═══════════════════════════════════════════════════════════════
       const rosterResult = await this.executeRosterGeneration(
         storeId,
@@ -147,11 +147,11 @@ export class SchedulingOrchestrator {
       const coverageGaps = rosterResult.coverageGaps;
       lastSuccessfulPhase = 'roster_generation';
 
-      // Cargar contratos de empleados
+      // Load employee contracts
       employeeContracts = await this.loadEmployeeContracts(storeId, workingRoster, addTrace);
 
       // ═══════════════════════════════════════════════════════════════
-      // PASO 2: ComplianceWorker - Validación inicial
+      // STEP 2: ComplianceWorker - Initial validation
       // ═══════════════════════════════════════════════════════════════
       const initialCompliance = await this.executeComplianceValidation(
         workingRoster,
@@ -160,7 +160,7 @@ export class SchedulingOrchestrator {
       );
       lastSuccessfulPhase = 'initial_compliance';
 
-      // Check for CRITICAL issues sin sugerencias → human review inmediato
+      // Check for CRITICAL issues without suggestions → immediate human review
       const hasCriticalWithoutFix =
         initialCompliance.issues?.some((i) => i.severity === 'CRITICAL') &&
         !initialCompliance.suggestions?.length;
@@ -183,7 +183,7 @@ export class SchedulingOrchestrator {
       }
 
       // ═══════════════════════════════════════════════════════════════
-      // PASO 3: ConflictWorker - Aplicar correcciones y resolver gaps
+      // STEP 3: ConflictWorker - Apply corrections and resolve gaps
       // ═══════════════════════════════════════════════════════════════
       const conflictResult = await this.executeConflictResolution(
         workingRoster,
@@ -199,7 +199,7 @@ export class SchedulingOrchestrator {
       lastSuccessfulPhase = 'conflict_resolution';
 
       // ═══════════════════════════════════════════════════════════════
-      // PASO 4: OptimizationWorker - Optimización de costos
+      // STEP 4: OptimizationWorker - Cost optimization
       // ═══════════════════════════════════════════════════════════════
       const optimizationResult = await this.executeOptimization(
         workingRoster,
@@ -210,7 +210,7 @@ export class SchedulingOrchestrator {
       lastSuccessfulPhase = 'optimization';
 
       // ═══════════════════════════════════════════════════════════════
-      // PASO 5: ComplianceWorker - Validación final
+      // STEP 5: ComplianceWorker - Final validation
       // ═══════════════════════════════════════════════════════════════
       const finalCompliance = await this.executeFinalValidation(
         workingRoster,
@@ -219,7 +219,7 @@ export class SchedulingOrchestrator {
       );
       lastSuccessfulPhase = 'final_validation';
 
-      // Determinar status final
+      // Determine final status
       const finalHasCritical = finalCompliance.issues?.some((i) => i.severity === 'CRITICAL');
       const requiresReview = conflictResult.resolution?.requiresHumanReview || finalHasCritical;
 
@@ -251,7 +251,7 @@ export class SchedulingOrchestrator {
       this.logger.error('Orchestration failed', error);
       addTrace('Orchestrator', 'Error', 'orchestration_failed', { error: lastError });
 
-      // Si tenemos un roster parcial, devolverlo con status de error
+      // If we have a partial roster, return it with error status
       if (workingRoster) {
         return {
           status: 'partial',
@@ -271,11 +271,11 @@ export class SchedulingOrchestrator {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // MÉTODOS PRIVADOS - Cada paso del flujo
+  // PRIVATE METHODS - Each step of the flow
   // ═══════════════════════════════════════════════════════════════════
 
   /**
-   * PASO 1: Genera el roster inicial y valida cobertura
+   * STEP 1: Generates the initial roster and validates coverage
    */
   private async executeRosterGeneration(
     storeId: string,
@@ -303,7 +303,7 @@ export class SchedulingOrchestrator {
       warningsCount: initialRosterResult.metrics?.warnings?.length ?? 0,
     });
 
-    // Detectar gaps de cobertura
+    // Detect coverage gaps
     let coverageGaps: CoverageGap[] = [];
     const coverageValidateTool = this.rosterWorker.tools?.find(
       (t) => t.function?.name === 'validate_coverage',
@@ -333,7 +333,7 @@ export class SchedulingOrchestrator {
   }
 
   /**
-   * Carga los contratos de empleados del roster
+   * Loads employee contracts from the roster
    */
   private async loadEmployeeContracts(
     storeId: string,
@@ -368,7 +368,7 @@ export class SchedulingOrchestrator {
   }
 
   /**
-   * PASO 2: Valida compliance inicial
+   * STEP 2: Validates initial compliance
    */
   private async executeComplianceValidation(
     roster: Roster,
@@ -402,7 +402,7 @@ export class SchedulingOrchestrator {
   }
 
   /**
-   * PASO 3: Aplica sugerencias y resuelve gaps
+   * STEP 3: Applies suggestions and resolves gaps
    * Includes iterative compliance validation to fix MIN_REST_VIOLATION issues
    */
   private async executeConflictResolution(
@@ -422,7 +422,7 @@ export class SchedulingOrchestrator {
     let conflictResolution: ConflictResolutionResult | undefined;
     let totalGapsResolved = 0;
 
-    // 3.1: Aplicar sugerencias de ComplianceWorker
+    // 3.1: Apply ComplianceWorker suggestions
     if (suggestions.length > 0) {
       addTrace('Orchestrator', 'ConflictWorker', 'apply_suggestions', {
         suggestionsCount: suggestions.length,
@@ -449,7 +449,7 @@ export class SchedulingOrchestrator {
       }
     }
 
-    // 3.2: Resolver gaps de cobertura
+    // 3.2: Resolve coverage gaps
     if (coverageGaps.length > 0) {
       addTrace('Orchestrator', 'ConflictWorker', 'resolve_coverage_gaps', {
         gapsCount: coverageGaps.length,
@@ -471,7 +471,7 @@ export class SchedulingOrchestrator {
         workingRoster = result.roster;
         totalGapsResolved = result.resolved;
 
-        // Merge con conflictResolution anterior si existe
+        // Merge with previous conflictResolution if exists
         if (conflictResolution) {
           conflictResolution = {
             ...conflictResolution,
@@ -616,7 +616,7 @@ export class SchedulingOrchestrator {
             if (conflictResolution) {
               conflictResolution.actions.push({
                 type: 'REMOVE_SHIFT',
-                description: `Eliminado turno para ${removedShift.employeeId} el ${removedShift.start.split('T')[0]} por violación de descanso`,
+                description: `Removed shift for ${removedShift.employeeId} on ${removedShift.start.split('T')[0]} due to rest violation`,
                 success: true,
                 employeeId: removedShift.employeeId,
               });
@@ -631,7 +631,7 @@ export class SchedulingOrchestrator {
 
         if (conflictResolution) {
           conflictResolution.warnings.push(
-            `Se eliminaron ${removed} turnos para cumplir con requisitos de descanso mínimo`,
+            `Removed ${removed} shifts to comply with minimum rest requirements`,
           );
         }
       }
@@ -641,7 +641,7 @@ export class SchedulingOrchestrator {
   }
 
   /**
-   * PASO 4: Optimiza costos del roster
+   * STEP 4: Optimizes roster costs
    */
   private async executeOptimization(
     roster: Roster,
@@ -660,10 +660,10 @@ export class SchedulingOrchestrator {
       return { roster, result: undefined };
     }
 
-    // Cargar penalty rules para optimización
+    // Load penalty rules for optimization
     const penaltyRules = await loadPenaltyRulesFromDb(storeId);
 
-    // Cargar constraints de policy
+    // Load policy constraints
     let constraints: OptimizationConstraints = {
       minHoursBetweenShifts: 10,
       minShiftHours: 3,
@@ -675,14 +675,14 @@ export class SchedulingOrchestrator {
         constraints.minHoursBetweenShifts = policy.minHoursBetweenShifts ?? 10;
       }
     } catch {
-      // Usar defaults
+      // Use defaults
     }
 
-    // Crear validador para que OptimizationWorker consulte a ComplianceWorker
+    // Create validator so OptimizationWorker can query ComplianceWorker
     const complianceValidator = this.createComplianceValidator(addTrace);
 
     addTrace('Orchestrator', 'OptimizationWorker', 'inject_compliance_validator', {
-      note: 'OptimizationWorker consultará a ComplianceWorker para cada optimización',
+      note: 'OptimizationWorker will query ComplianceWorker for each optimization',
     });
 
     const optimizationResult = (await optimizationTool.function.execute({
@@ -707,7 +707,7 @@ export class SchedulingOrchestrator {
   }
 
   /**
-   * PASO 5: Validación final de compliance
+   * STEP 5: Final compliance validation
    */
   private async executeFinalValidation(
     roster: Roster,
@@ -739,8 +739,8 @@ export class SchedulingOrchestrator {
   }
 
   /**
-   * Crea un validador de compliance que puede ser inyectado al OptimizationWorker
-   * Esto permite que OptimizationWorker consulte a ComplianceWorker sin duplicar lógica
+   * Creates a compliance validator that can be injected into OptimizationWorker
+   * This allows OptimizationWorker to query ComplianceWorker without duplicating logic
    */
   private createComplianceValidator(addTrace: TraceFunction): ComplianceValidator {
     const complianceTool = this.complianceWorker.tools?.find(
@@ -748,7 +748,7 @@ export class SchedulingOrchestrator {
     );
 
     return async (roster: Roster): Promise<ComplianceResult> => {
-      // Registrar la consulta en el trace
+      // Record the query in the trace
       addTrace('OptimizationWorker', 'ComplianceWorker', 'validate_proposed_change', {
         shiftsCount: roster.roster.length,
       });
@@ -762,7 +762,7 @@ export class SchedulingOrchestrator {
         employeeContracts: [],
       })) as ComplianceResult;
 
-      // Registrar la respuesta
+      // Record the response
       addTrace('ComplianceWorker', 'OptimizationWorker', 'validation_response', {
         passed: result.passed,
         criticalIssues: result.issues?.filter((i) => i.severity === 'CRITICAL').length ?? 0,
@@ -773,8 +773,8 @@ export class SchedulingOrchestrator {
   }
 
   /**
-   * Genera un roster usando el SDK oficial @openai/agents (modo dinámico)
-   * El agente decide qué herramientas ejecutar basándose en el contexto
+   * Generates a roster using the official @openai/agents SDK (dynamic mode)
+   * The agent decides which tools to execute based on context
    */
   async generateRosterDynamic(storeId: string, weekStart: Date): Promise<OrchestrationResult> {
     const startTime = Date.now();
@@ -792,17 +792,17 @@ export class SchedulingOrchestrator {
       });
     };
 
-    // Estado compartido entre tools
+    // Shared state between tools
     let workingRoster: Roster | null = null;
     let employeeContracts: EmployeeContract[] = [];
     let complianceResult: ComplianceResult = { passed: true, issues: [], summary: 'Not yet validated' };
     let conflictResult: ConflictResolutionResult | undefined;
     let optimizationResult: OptimizationResultWithQueries | undefined;
 
-    // Referencias necesarias para closures
+    // References needed for closures
     const self = this;
 
-    // Crear las tools usando el SDK
+    // Create tools using the SDK
     const generateRosterTool = tool({
       name: 'generate_roster',
       description: 'Generate initial roster based on employee availability, store requirements, and shift codes. Call this first.',
@@ -906,7 +906,7 @@ export class SchedulingOrchestrator {
       },
     });
 
-    // Crear el agente orquestador
+    // Create the orchestrator agent
     const orchestratorAgent = new Agent({
       name: 'SchedulingOrchestrator',
       instructions: `You are the Scheduling Orchestrator for McDonald's Australia restaurant ${storeId}.
@@ -942,7 +942,7 @@ Respond with a brief summary when complete.`,
     });
 
     try {
-      // Ejecutar el agente usando el SDK
+      // Execute the agent using the SDK
       const result = await run(
         orchestratorAgent,
         `Generate an optimized roster for store ${storeId} for the week starting ${weekStart.toISOString().split('T')[0]}. Execute the full workflow: generate roster, validate compliance, resolve any conflicts, optimize costs, and perform final validation.`
@@ -960,7 +960,7 @@ Respond with a brief summary when complete.`,
       });
     }
 
-    // Construir resultado final
+    // Build final result
     const endTime = Date.now();
     const status: OrchestrationResult['status'] = 
       !workingRoster ? 'optimization_failed' :
@@ -985,7 +985,7 @@ Respond with a brief summary when complete.`,
 
 
   /**
-   * Crea un roster vacío para casos de error
+   * Creates an empty roster for error cases
    */
   private createEmptyRoster(storeId: string, weekStart: Date): Roster {
     return {
@@ -997,7 +997,7 @@ Respond with a brief summary when complete.`,
   }
 
   /**
-   * Sanitiza datos para el trace (evita objetos muy grandes)
+   * Sanitizes data for the trace (avoids very large objects)
    */
   private sanitizeTraceData(data: unknown): unknown {
     if (data === null || data === undefined) return data;

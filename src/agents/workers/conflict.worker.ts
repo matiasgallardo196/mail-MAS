@@ -125,7 +125,7 @@ function createShiftFromAvailability(
 }
 
 /**
- * Aplica una sugerencia de ComplianceWorker al roster
+ * Applies a ComplianceWorker suggestion to the roster
  * 
  * AUTONOMOUS BEHAVIOR:
  * - For REMOVE_SHIFT without shiftIndex: finds and removes the employee's last shift
@@ -146,7 +146,7 @@ function applySuggestion(
       .map(entry => entry.idx);
     
     if (employeeShiftIndices.length === 0) {
-      return { applied: false, description: `No se encontraron turnos para ${suggestion.employeeId}` };
+      return { applied: false, description: `No shifts found for ${suggestion.employeeId}` };
     }
     // Pick the last shift (most likely to be the excess that pushed over the limit)
     shiftIndex = employeeShiftIndices[employeeShiftIndices.length - 1];
@@ -156,12 +156,12 @@ function applySuggestion(
   if (suggestion.type === 'ASSIGN_MORE_SHIFTS') {
     return { 
       applied: false, 
-      description: `ASSIGN_MORE_SHIFTS para ${suggestion.employeeId} debe resolverse via resolve_coverage_gaps` 
+      description: `ASSIGN_MORE_SHIFTS for ${suggestion.employeeId} must be resolved via resolve_coverage_gaps` 
     };
   }
 
   if (shiftIndex === undefined || shiftIndex < 0 || shiftIndex >= shifts.length) {
-    return { applied: false, description: `Índice de turno inválido: ${shiftIndex}` };
+    return { applied: false, description: `Invalid shift index: ${shiftIndex}` };
   }
 
   const shift = shifts[shiftIndex];
@@ -173,7 +173,7 @@ function applySuggestion(
         shift.end = change.newEnd;
         return {
           applied: true,
-          description: `Extendido turno de ${suggestion.employeeId} hasta ${change.newEnd}`,
+          description: `Extended shift for ${suggestion.employeeId} until ${change.newEnd}`,
         };
       }
       break;
@@ -183,7 +183,7 @@ function applySuggestion(
         shift.end = change.newEnd;
         return {
           applied: true,
-          description: `Acortado turno de ${suggestion.employeeId} hasta ${change.newEnd}`,
+          description: `Shortened shift for ${suggestion.employeeId} until ${change.newEnd}`,
         };
       }
       break;
@@ -194,7 +194,7 @@ function applySuggestion(
         shift.end = change.newEnd;
         return {
           applied: true,
-          description: `Movido turno de ${suggestion.employeeId} a ${change.newStart}`,
+          description: `Moved shift for ${suggestion.employeeId} to ${change.newStart}`,
         };
       }
       break;
@@ -204,7 +204,7 @@ function applySuggestion(
         shift.employeeId = change.newEmployeeId;
         return {
           applied: true,
-          description: `Reasignado turno a empleado ${change.newEmployeeId}`,
+          description: `Reassigned shift to employee ${change.newEmployeeId}`,
         };
       }
       break;
@@ -213,77 +213,77 @@ function applySuggestion(
       (shift as any).__toRemove = true;
       return {
         applied: true,
-        description: `Marcado para eliminar turno de ${suggestion.employeeId}`,
+        description: `Marked for removal shift of ${suggestion.employeeId}`,
       };
 
     case 'ADD_REST_DAY':
       return {
         applied: false,
-        description: `Sugerencia de agregar día de descanso para ${suggestion.employeeId} (requiere review manual)`,
+        description: `Suggestion to add rest day for ${suggestion.employeeId} (requires manual review)`,
       };
   }
 
-  return { applied: false, description: `No se pudo aplicar sugerencia: ${suggestion.type}` };
+  return { applied: false, description: `Could not apply suggestion: ${suggestion.type}` };
 }
 
 // --- Main Worker Class ---
 
 /**
- * ConflictWorker - Resuelve conflictos de cobertura y aplica correcciones
+ * ConflictWorker - Resolves coverage conflicts and applies corrections
  *
- * Responsabilidades:
- * - Aplicar sugerencias de ComplianceWorker/OptimizationWorker
- * - Resolver gaps de cobertura buscando empleados alternativos
- * - Reasignar turnos cuando hay conflictos
- * - Marcar situaciones irresolubles para revisión humana
+ * Responsibilities:
+ * - Apply suggestions from ComplianceWorker/OptimizationWorker
+ * - Resolve coverage gaps by finding alternative employees
+ * - Reassign shifts when there are conflicts
+ * - Mark unresolvable situations for human review
  *
- * Colaboración con otros agents:
- * - Recibe gaps de cobertura de RosterWorker
- * - Recibe suggestions de ComplianceWorker
- * - Consulta employee.tools para buscar empleados disponibles
- * - Reporta a Orchestrator situaciones que requieren intervención humana
+ * Collaboration with other agents:
+ * - Receives coverage gaps from RosterWorker
+ * - Receives suggestions from ComplianceWorker
+ * - Queries employee.tools to find available employees
+ * - Reports to Orchestrator situations that require human intervention
  */
 export class ConflictWorker extends WorkerBase {
   constructor() {
     super({
       name: 'ConflictWorker',
       instructions: `
-        Eres un experto en resolución de conflictos de scheduling. Tu tarea es:
+        You are an expert in scheduling conflict resolution. Your task is:
 
-        1. APLICAR CORRECCIONES:
-           - Procesar sugerencias de ComplianceWorker (EXTEND_SHIFT, MOVE_SHIFT, etc.)
-           - Aplicar cambios respetando constraints
-           - Registrar cada acción tomada
+        1. APPLY CORRECTIONS:
+           - Process suggestions from ComplianceWorker (EXTEND_SHIFT, MOVE_SHIFT, etc.)
+           - Apply changes respecting constraints
+           - Record each action taken
 
-        2. RESOLVER GAPS DE COBERTURA:
-           - Analizar estaciones con insuficiente staff
-           - Buscar empleados disponibles que matcheen con la estación
-           - Crear nuevos turnos para cubrir gaps
-           - Priorizar empleados con menos horas asignadas (balance)
+        2. RESOLVE COVERAGE GAPS:
+           - Analyze stations with insufficient staff
+           - Find available employees that match the station
+           - Create new shifts to cover gaps
+           - Prioritize employees with fewer assigned hours (balance)
 
-        3. MANEJAR CONFLICTOS IRRESOLUBLES:
-           - Si no hay empleados disponibles → marcar para revisión humana
-           - Si la sugerencia no se puede aplicar → reportar razón
-           - Generar reporte de situaciones que requieren intervención
+        3. HANDLE UNRESOLVABLE CONFLICTS:
+           - If no employees available → mark for human review
+           - If suggestion cannot be applied → report reason
+           - Generate report of situations requiring intervention
 
-        4. COLABORAR CON OTROS AGENTS:
-           - Recibir feedback estructurado
-           - Devolver roster corregido con trace de acciones
-           - Proporcionar métricas de resolución
+        4. COLLABORATE WITH OTHER AGENTS:
+           - Receive structured feedback
+           - Return corrected roster with action trace
+           - Provide resolution metrics
 
-        PRIORIDADES:
-        1. Primero aplicar suggestions de compliance (son obligatorias)
-        2. Luego resolver gaps de cobertura
-        3. Finalmente balancear carga de trabajo
+        PRIORITIES:
+        1. First apply compliance suggestions (mandatory)
+        2. Then resolve coverage gaps
+        3. Finally balance workload
       `,
       tools: [
-        // Tool 1: Aplicar sugerencias de otros workers
+        // Tool 1: Apply suggestions from other workers
         {
           type: 'function',
           function: {
             name: 'apply_suggestions',
             description:
-              'Aplica sugerencias de ComplianceWorker u OptimizationWorker al roster. Devuelve roster modificado con trace de cambios.',
+              'Applies suggestions from ComplianceWorker or OptimizationWorker to the roster. Returns modified roster with change trace.',
             parameters: ApplySuggestionsInputSchema,
             execute: async (args: unknown): Promise<ConflictResolutionResult> => {
               const input = ApplySuggestionsInputSchema.parse(args);
@@ -293,7 +293,7 @@ export class ConflictWorker extends WorkerBase {
               let resolved = 0;
               let unresolved = 0;
 
-              // Aplicar cada sugerencia
+              // Apply each suggestion
               for (const suggestion of input.suggestions) {
                 const result = applySuggestion(workingRoster, suggestion as ComplianceSuggestion);
                 actions.push({
@@ -308,14 +308,14 @@ export class ConflictWorker extends WorkerBase {
                   resolved++;
                 } else {
                   unresolved++;
-                  warnings.push(`No se pudo aplicar: ${suggestion.reason || suggestion.type}`);
+                  warnings.push(`Could not apply: ${suggestion.reason || suggestion.type}`);
                 }
               }
 
-              // Remover turnos marcados para eliminación
+              // Remove shifts marked for deletion
               workingRoster.roster = workingRoster.roster.filter((s: any) => !s.__toRemove);
 
-              // Actualizar timestamp
+              // Update timestamp
               workingRoster.generatedAt = new Date().toISOString();
 
               return ConflictResolutionResultSchema.parse({
@@ -329,13 +329,13 @@ export class ConflictWorker extends WorkerBase {
             },
           },
         },
-        // Tool 2: Resolver gaps de cobertura
+        // Tool 2: Resolve coverage gaps
         {
           type: 'function',
           function: {
             name: 'resolve_coverage_gaps',
             description:
-              'Busca empleados disponibles para cubrir gaps de cobertura en estaciones. Crea nuevos turnos según disponibilidad.',
+              'Finds available employees to cover coverage gaps in stations. Creates new shifts based on availability.',
             parameters: ResolveCoverageGapsInputSchema,
             execute: async (args: unknown): Promise<ConflictResolutionResult> => {
               const input = ResolveCoverageGapsInputSchema.parse(args);
@@ -387,7 +387,7 @@ export class ConflictWorker extends WorkerBase {
                 employeeTypes.set(contract.employeeId, contract.employmentType);
               }
 
-              // Set de empleados ya asignados por fecha (to avoid same-day duplicates)
+              // Set of employees already assigned by date (to avoid same-day duplicates)
               const assignedByDate: Map<string, Set<string>> = new Map();
               for (const shift of workingRoster.roster) {
                 const date = shift.start.split('T')[0];
@@ -397,20 +397,20 @@ export class ConflictWorker extends WorkerBase {
                 assignedByDate.get(date)!.add(shift.employeeId);
               }
 
-              // Procesar cada gap
+              // Process each gap
               for (const gap of input.gaps) {
                 if (gap.gap <= 0) continue;
 
                 try {
-                  // Buscar empleados disponibles para esa fecha
+                  // Find employees available for that date
                   const availability = await employeeTools.getEmployeeAvailability.execute({
                     storeId: input.storeId,
                     startDate: gap.date,
                     endDate: gap.date,
-                    employeeIds: [], // Todos los empleados
+                    employeeIds: [], // All employees
                   });
 
-                  // Buscar skills para matching
+                  // Find skills for matching
                   const employeeIds = [...new Set(availability.map((a) => a.employeeId))];
                   const skills =
                     employeeIds.length > 0
@@ -432,14 +432,14 @@ export class ConflictWorker extends WorkerBase {
                     }
                   }
 
-                  // Filtrar empleados que:
-                  // 1. Estén disponibles ese día
-                  // 2. No estén ya asignados ese día
-                  // 3. No excedan el límite de HORAS semanales según su tipo de contrato
-                  // 4. Matcheen con la estación (si es posible)
+                  // Filter employees who:
+                  // 1. Are available that day
+                  // 2. Are not already assigned that day
+                  // 3. Don't exceed the weekly HOURS limit per their contract type
+                  // 4. Match the station (if possible)
                   const assigned = assignedByDate.get(gap.date) || new Set();
 
-                  const candidatos = availability.filter((avail) => {
+                  const candidates = availability.filter((avail) => {
                     // Check if already assigned today
                     if (assigned.has(avail.employeeId)) return false;
                     
@@ -454,7 +454,7 @@ export class ConflictWorker extends WorkerBase {
                     if (!avail.shiftCode || avail.shiftCode === '/' || avail.shiftCode === 'NA')
                       return false;
 
-                    // Verificar skill match (with CREW/MANAGER fallback)
+                    // Verify skill match (with CREW/MANAGER fallback)
                     const empSkills = skills.find((s) => s.employeeId === avail.employeeId);
                     if (empSkills) {
                       const hasMatch = empSkills.skills.some(
@@ -467,37 +467,37 @@ export class ConflictWorker extends WorkerBase {
                       if (hasMatch) return true;
                     }
 
-                    // Si no hay match de skills pero hay disponibilidad, considerar
+                    // If no skill match but has availability, consider
                     return avail.stationId === gap.stationId;
                   });
 
-                  // Asignar hasta cubrir el gap
+                  // Assign until gap is covered
                   let gapRemaining = gap.gap;
-                  for (const candidato of candidatos) {
+                  for (const candidate of candidates) {
                     if (gapRemaining <= 0) break;
 
                     const newShift = createShiftFromAvailability(
-                      candidato,
+                      candidate,
                       gap.stationId,
                       gap.stationCode,
                     );
 
                     if (newShift) {
                       workingRoster.roster.push(newShift);
-                      assigned.add(candidato.employeeId);
+                      assigned.add(candidate.employeeId);
                       
                       // Update weekly hours tracking
-                      const currentHrs = hoursPerEmployee.get(candidato.employeeId) || 0;
-                      hoursPerEmployee.set(candidato.employeeId, currentHrs + getShiftHours(candidato.shiftCode));
+                      const currentHrs = hoursPerEmployee.get(candidate.employeeId) || 0;
+                      hoursPerEmployee.set(candidate.employeeId, currentHrs + getShiftHours(candidate.shiftCode));
                       
                       gapRemaining--;
                       resolved++;
 
                       actions.push({
                         type: 'ADD_SHIFT',
-                        description: `Agregado turno para ${candidato.employeeId} en ${gap.stationCode || gap.stationId} el ${gap.date}`,
+                        description: `Added shift for ${candidate.employeeId} at ${gap.stationCode || gap.stationId} on ${gap.date}`,
                         success: true,
-                        employeeId: candidato.employeeId,
+                        employeeId: candidate.employeeId,
                       });
                     }
                   }
@@ -505,18 +505,18 @@ export class ConflictWorker extends WorkerBase {
                   if (gapRemaining > 0) {
                     unresolved += gapRemaining;
                     warnings.push(
-                      `Gap parcialmente resuelto para ${gap.stationCode || gap.stationId} el ${gap.date}: faltan ${gapRemaining} empleados (límite semanal puede estar afectando)`,
+                      `Gap partially resolved for ${gap.stationCode || gap.stationId} on ${gap.date}: missing ${gapRemaining} employees (weekly limit may be affecting)`,
                     );
                   }
                 } catch (error) {
                   unresolved += gap.gap;
                   warnings.push(
-                    `Error al resolver gap para ${gap.stationCode || gap.stationId} el ${gap.date}: ${error instanceof Error ? error.message : String(error)}`,
+                    `Error resolving gap for ${gap.stationCode || gap.stationId} on ${gap.date}: ${error instanceof Error ? error.message : String(error)}`,
                   );
                 }
               }
 
-              // Actualizar timestamp
+              // Update timestamp
               workingRoster.generatedAt = new Date().toISOString();
 
               return ConflictResolutionResultSchema.parse({
@@ -530,13 +530,13 @@ export class ConflictWorker extends WorkerBase {
             },
           },
         },
-        // Tool 3: Marcar para revisión humana
+        // Tool 3: Mark for human review
         {
           type: 'function',
           function: {
             name: 'request_human_review',
             description:
-              'Marca situaciones que no pueden resolverse automáticamente para revisión humana.',
+              'Marks situations that cannot be resolved automatically for human review.',
             parameters: z.object({
               roster: RosterSchema,
               issues: z.array(
@@ -569,7 +569,7 @@ export class ConflictWorker extends WorkerBase {
                 (issue) =>
                   `[${issue.severity}] ${issue.type}: ${issue.description}` +
                   (issue.affectedEmployeeIds
-                    ? ` (empleados: ${issue.affectedEmployeeIds.join(', ')})`
+                    ? ` (employees: ${issue.affectedEmployeeIds.join(', ')})`
                     : ''),
               );
 

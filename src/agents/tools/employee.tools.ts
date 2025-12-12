@@ -54,7 +54,7 @@ async function resolvePolicy(storeId: string): Promise<SchedulingPolicy | null> 
 export const employeeTools = {
   getEmployeeContracts: {
     name: 'get_employee_contracts',
-    description: 'Obtiene contratos (employment type, horas máx/semana, min rest) desde la DB',
+    description: 'Gets contracts (employment type, max hours/week, min rest) from DB',
     inputSchema: GetContractsInput,
     outputSchema: z.array(EmployeeContractSchema),
     execute: async ({ storeId, employeeIds }: z.infer<typeof GetContractsInput>): Promise<EmployeeContract[]> => {
@@ -87,7 +87,7 @@ export const employeeTools = {
 
   getEmployeeAvailability: {
     name: 'get_employee_availability',
-    description: 'Obtiene disponibilidad declarada y shift codes desde la DB',
+    description: 'Gets declared availability and shift codes from DB',
     inputSchema: GetAvailabilityInput,
     outputSchema: z.array(EmployeeAvailabilitySchema),
     execute: async ({
@@ -141,7 +141,7 @@ export const employeeTools = {
 
   getEmployeeSkills: {
     name: 'get_employee_skills',
-    description: 'Obtiene skills desde la DB (por ahora roles y default station)',
+    description: 'Gets skills from DB (for now roles and default station)',
     inputSchema: GetSkillsInput,
     outputSchema: z.array(EmployeeSkillSchema),
     execute: async ({ employeeIds }: z.infer<typeof GetSkillsInput>): Promise<EmployeeSkill[]> => {

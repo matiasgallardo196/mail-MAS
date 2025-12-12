@@ -11,34 +11,34 @@ export class EmployeeAvailabilityController {
   constructor(private readonly employeeAvailabilityService: EmployeeAvailabilityService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear una nueva disponibilidad de empleado' })
-  @ApiResponse({ status: 201, description: 'Disponibilidad creada exitosamente', type: EmployeeAvailability })
-  @ApiResponse({ status: 404, description: 'Empleado, período, tienda, código de turno o estación no encontrado' })
-  @ApiResponse({ status: 409, description: 'Ya existe una disponibilidad para este empleado, período y fecha' })
+  @ApiOperation({ summary: 'Create a new employee availability' })
+  @ApiResponse({ status: 201, description: 'Availability created successfully', type: EmployeeAvailability })
+  @ApiResponse({ status: 404, description: 'Employee, period, store, shift code or station not found' })
+  @ApiResponse({ status: 409, description: 'Availability already exists for this employee, period and date' })
   create(@Body() createAvailabilityDto: CreateEmployeeAvailabilityDto): Promise<EmployeeAvailability> {
     return this.employeeAvailabilityService.create(createAvailabilityDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtener todas las disponibilidades activas' })
-  @ApiResponse({ status: 200, description: 'Lista de disponibilidades', type: [EmployeeAvailability] })
+  @ApiOperation({ summary: 'Get all active availabilities' })
+  @ApiResponse({ status: 200, description: 'List of availabilities', type: [EmployeeAvailability] })
   findAll(): Promise<EmployeeAvailability[]> {
     return this.employeeAvailabilityService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener una disponibilidad por ID' })
-  @ApiResponse({ status: 200, description: 'Disponibilidad encontrada', type: EmployeeAvailability })
-  @ApiResponse({ status: 404, description: 'Disponibilidad no encontrada' })
+  @ApiOperation({ summary: 'Get an availability by ID' })
+  @ApiResponse({ status: 200, description: 'Availability found', type: EmployeeAvailability })
+  @ApiResponse({ status: 404, description: 'Availability not found' })
   findOne(@Param('id') id: string): Promise<EmployeeAvailability> {
     return this.employeeAvailabilityService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar una disponibilidad' })
-  @ApiResponse({ status: 200, description: 'Disponibilidad actualizada exitosamente', type: EmployeeAvailability })
-  @ApiResponse({ status: 404, description: 'Disponibilidad o relación no encontrada' })
-  @ApiResponse({ status: 409, description: 'Ya existe una disponibilidad para este empleado, período y fecha' })
+  @ApiOperation({ summary: 'Update an availability' })
+  @ApiResponse({ status: 200, description: 'Availability updated successfully', type: EmployeeAvailability })
+  @ApiResponse({ status: 404, description: 'Availability or relation not found' })
+  @ApiResponse({ status: 409, description: 'Availability already exists for this employee, period and date' })
   update(
     @Param('id') id: string,
     @Body() updateAvailabilityDto: UpdateEmployeeAvailabilityDto,
@@ -48,9 +48,9 @@ export class EmployeeAvailabilityController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar una disponibilidad (soft delete)' })
-  @ApiResponse({ status: 204, description: 'Disponibilidad eliminada exitosamente' })
-  @ApiResponse({ status: 404, description: 'Disponibilidad no encontrada' })
+  @ApiOperation({ summary: 'Delete an availability (soft delete)' })
+  @ApiResponse({ status: 204, description: 'Availability deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Availability not found' })
   remove(@Param('id') id: string): Promise<void> {
     return this.employeeAvailabilityService.remove(id);
   }

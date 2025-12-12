@@ -11,43 +11,43 @@ export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear un nuevo empleado' })
-  @ApiResponse({ status: 201, description: 'Empleado creado exitosamente', type: Employee })
-  @ApiResponse({ status: 404, description: 'Tienda o estación no encontrada' })
-  @ApiResponse({ status: 409, description: 'El código externo del empleado ya existe' })
+  @ApiOperation({ summary: 'Create a new employee' })
+  @ApiResponse({ status: 201, description: 'Employee created successfully', type: Employee })
+  @ApiResponse({ status: 404, description: 'Store or station not found' })
+  @ApiResponse({ status: 409, description: 'Employee external code already exists' })
   create(@Body() createEmployeeDto: CreateEmployeeDto): Promise<Employee> {
     return this.employeesService.create(createEmployeeDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtener todos los empleados activos' })
-  @ApiResponse({ status: 200, description: 'Lista de empleados', type: [Employee] })
+  @ApiOperation({ summary: 'Get all active employees' })
+  @ApiResponse({ status: 200, description: 'List of employees', type: [Employee] })
   findAll(): Promise<Employee[]> {
     return this.employeesService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener un empleado por ID' })
-  @ApiResponse({ status: 200, description: 'Empleado encontrado', type: Employee })
-  @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
+  @ApiOperation({ summary: 'Get an employee by ID' })
+  @ApiResponse({ status: 200, description: 'Employee found', type: Employee })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
   findOne(@Param('id') id: string): Promise<Employee> {
     return this.employeesService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar un empleado' })
-  @ApiResponse({ status: 200, description: 'Empleado actualizado exitosamente', type: Employee })
-  @ApiResponse({ status: 404, description: 'Empleado, tienda o estación no encontrada' })
-  @ApiResponse({ status: 409, description: 'El código externo del empleado ya existe' })
+  @ApiOperation({ summary: 'Update an employee' })
+  @ApiResponse({ status: 200, description: 'Employee updated successfully', type: Employee })
+  @ApiResponse({ status: 404, description: 'Employee, store or station not found' })
+  @ApiResponse({ status: 409, description: 'Employee external code already exists' })
   update(@Param('id') id: string, @Body() updateEmployeeDto: UpdateEmployeeDto): Promise<Employee> {
     return this.employeesService.update(id, updateEmployeeDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar un empleado (soft delete)' })
-  @ApiResponse({ status: 204, description: 'Empleado eliminado exitosamente' })
-  @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
+  @ApiOperation({ summary: 'Delete an employee (soft delete)' })
+  @ApiResponse({ status: 204, description: 'Employee deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
   remove(@Param('id') id: string): Promise<void> {
     return this.employeesService.remove(id);
   }

@@ -11,43 +11,43 @@ export class ShiftAssignmentsController {
   constructor(private readonly shiftAssignmentsService: ShiftAssignmentsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear una nueva asignación de turno' })
-  @ApiResponse({ status: 201, description: 'Asignación creada exitosamente', type: ShiftAssignment })
-  @ApiResponse({ status: 404, description: 'Relación no encontrada' })
-  @ApiResponse({ status: 409, description: 'La asignación ya existe' })
+  @ApiOperation({ summary: 'Create a new shift assignment' })
+  @ApiResponse({ status: 201, description: 'Assignment created successfully', type: ShiftAssignment })
+  @ApiResponse({ status: 404, description: 'Relation not found' })
+  @ApiResponse({ status: 409, description: 'Assignment already exists' })
   create(@Body() createAssignmentDto: CreateShiftAssignmentDto): Promise<ShiftAssignment> {
     return this.shiftAssignmentsService.create(createAssignmentDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtener todas las asignaciones activas' })
-  @ApiResponse({ status: 200, description: 'Lista de asignaciones', type: [ShiftAssignment] })
+  @ApiOperation({ summary: 'Get all active assignments' })
+  @ApiResponse({ status: 200, description: 'List of assignments', type: [ShiftAssignment] })
   findAll(): Promise<ShiftAssignment[]> {
     return this.shiftAssignmentsService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener una asignación por ID' })
-  @ApiResponse({ status: 200, description: 'Asignación encontrada', type: ShiftAssignment })
-  @ApiResponse({ status: 404, description: 'Asignación no encontrada' })
+  @ApiOperation({ summary: 'Get an assignment by ID' })
+  @ApiResponse({ status: 200, description: 'Assignment found', type: ShiftAssignment })
+  @ApiResponse({ status: 404, description: 'Assignment not found' })
   findOne(@Param('id') id: string): Promise<ShiftAssignment> {
     return this.shiftAssignmentsService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar una asignación' })
-  @ApiResponse({ status: 200, description: 'Asignación actualizada exitosamente', type: ShiftAssignment })
-  @ApiResponse({ status: 404, description: 'Asignación o relación no encontrada' })
-  @ApiResponse({ status: 409, description: 'La nueva asignación ya existe' })
+  @ApiOperation({ summary: 'Update an assignment' })
+  @ApiResponse({ status: 200, description: 'Assignment updated successfully', type: ShiftAssignment })
+  @ApiResponse({ status: 404, description: 'Assignment or relation not found' })
+  @ApiResponse({ status: 409, description: 'New assignment already exists' })
   update(@Param('id') id: string, @Body() updateAssignmentDto: UpdateShiftAssignmentDto): Promise<ShiftAssignment> {
     return this.shiftAssignmentsService.update(id, updateAssignmentDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar una asignación (soft delete)' })
-  @ApiResponse({ status: 204, description: 'Asignación eliminada exitosamente' })
-  @ApiResponse({ status: 404, description: 'Asignación no encontrada' })
+  @ApiOperation({ summary: 'Delete an assignment (soft delete)' })
+  @ApiResponse({ status: 204, description: 'Assignment deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Assignment not found' })
   remove(@Param('id') id: string): Promise<void> {
     return this.shiftAssignmentsService.remove(id);
   }

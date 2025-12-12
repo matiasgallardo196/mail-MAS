@@ -36,34 +36,34 @@ export class ComplianceWorker extends WorkerBase {
   constructor() {
     super({
       name: 'ComplianceWorker',
-      instructions: `Valida cumplimiento Fair Work usando datos 100% de la DB (políticas, penalty_rules, contratos).
+      instructions: `Validates Fair Work compliance using 100% DB data (policies, penalty_rules, contracts).
 
-RESPONSABILIDADES:
-- Carga minHoursBetweenShifts y maxHoursWeek desde la DB (SchedulingPolicy + EmploymentTypeHoursPolicy).
-- Detecta feriados australianos automáticamente (sin DB de feriados).
-- Valida: descansos entre turnos, horas máx semanales, duración mínima 3h (casuals), max span 12h.
-- Si faltan penalty_rules o policy en DB, devuelve CRITICAL.
-- Genera sugerencias de cambio para cada issue encontrado (feedback para ConflictWorker).
-- Siempre devuelve JSON que cumpla ComplianceResultSchema.
+RESPONSIBILITIES:
+- Load minHoursBetweenShifts and maxHoursWeek from DB (SchedulingPolicy + EmploymentTypeHoursPolicy).
+- Automatically detect Australian holidays (no holiday DB needed).
+- Validate: rest periods between shifts, max weekly hours, minimum 3h duration (casuals), max span 12h.
+- If penalty_rules or policy missing in DB, return CRITICAL.
+- Generate change suggestions for each issue found (feedback for ConflictWorker).
+- Always return JSON that complies with ComplianceResultSchema.
 
-CLASIFICACIÓN DE SEVERIDADES:
-- CRITICAL: Violaciones legales que DEBEN corregirse antes de publicar el roster.
-  Ejemplos: turno casual <3h, descanso insuficiente entre turnos, supera horas máx semanales.
-  Acción: ConflictWorker DEBE aplicar la sugerencia asociada.
+SEVERITY CLASSIFICATION:
+- CRITICAL: Legal violations that MUST be corrected before publishing the roster.
+  Examples: casual shift <3h, insufficient rest between shifts, exceeds max weekly hours.
+  Action: ConflictWorker MUST apply the associated suggestion.
 
-- MAJOR: Problemas significativos que deberían corregirse pero no bloquean.
-  Ejemplos: turno en feriado con alto multiplier de costo, balance desigual de horas.
-  Acción: OptimizationWorker debería considerar optimizar.
+- MAJOR: Significant problems that should be corrected but don't block.
+  Examples: shift on holiday with high cost multiplier, unequal hours balance.
+  Action: OptimizationWorker should consider optimizing.
 
-- MINOR: Alertas informativas que no requieren acción inmediata.
-  Ejemplos: falta contrato en DB (usa defaults), warning de configuración.
-  Acción: Registrar para review pero no bloquear.`,
+- MINOR: Informational alerts that don't require immediate action.
+  Examples: missing contract in DB (uses defaults), configuration warning.
+  Action: Log for review but don't block.`,
       tools: [
         {
           type: 'function',
           function: {
             name: 'validate_fair_work_compliance',
-            description: 'Valida un roster contra Fair Work Act y genera sugerencias de corrección',
+            description: 'Validates a roster against Fair Work Act and generates correction suggestions',
             parameters: z.object({
               roster: RosterSchema,
               employeeContracts: z.array(EmployeeContractSchema).optional(),
@@ -72,7 +72,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                   minHoursBetweenShifts: z.number().optional(),
                 })
                 .optional(),
-              // Estado australiano para detectar feriados locales (default: VIC)
+              // Australian state to detect local holidays (default: VIC)
               australianState: z.string().optional(),
             }),
             execute: async (args: any): Promise<ComplianceResult> => {
@@ -105,7 +105,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                     employeeId: '',
                     issue: 'MISSING_POLICY',
                     severity: 'CRITICAL',
-                    details: { message: 'No se encontró SchedulingPolicy en DB para este store' },
+                    details: { message: 'SchedulingPolicy not found in DB for this store' },
                   });
                 }
               } catch (err) {
@@ -114,7 +114,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                   employeeId: '',
                   issue: 'POLICY_LOAD_ERROR',
                   severity: 'MINOR',
-                  details: { message: 'No se pudo cargar policy de DB, usando defaults' },
+                  details: { message: 'Could not load policy from DB, using defaults' },
                 });
               }
 
@@ -125,7 +125,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                   employeeId: '',
                   issue: 'MISSING_PENALTY_RULES',
                   severity: 'CRITICAL',
-                  details: { message: 'No penalty_rules encontradas en DB' },
+                  details: { message: 'No penalty_rules found in DB' },
                 });
               }
 
@@ -142,7 +142,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                     employeeId: '',
                     issue: 'CONTRACTS_LOAD_ERROR',
                     severity: 'MINOR',
-                    details: { message: 'No se pudieron cargar contratos de DB' },
+                    details: { message: 'Could not load contracts from DB' },
                   });
                 }
               }
@@ -172,7 +172,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                     employeeId,
                     issue: 'MISSING_CONTRACT',
                     severity: 'MINOR',
-                    details: { message: `No se encontró contrato para empleado ${employeeId}, usando defaults` },
+                    details: { message: `Contract not found for employee ${employeeId}, using defaults` },
                   });
                 }
 
@@ -191,7 +191,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                         shiftIndex: originalIndex,
                         shiftHours,
                         minRequired: MIN_SHIFT_HOURS_CASUAL,
-                        message: `Turno casual de ${shiftHours.toFixed(1)}h menor a mínimo ${MIN_SHIFT_HOURS_CASUAL}h`,
+                        message: `Casual shift of ${shiftHours.toFixed(1)}h less than minimum ${MIN_SHIFT_HOURS_CASUAL}h`,
                       },
                     });
                     // Suggestion: Extend shift to 3h
@@ -199,7 +199,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                       type: 'EXTEND_SHIFT',
                       employeeId,
                       shiftIndex: originalIndex,
-                      reason: `Extender turno a mínimo ${MIN_SHIFT_HOURS_CASUAL}h para cumplir Fair Work`,
+                      reason: `Extend shift to minimum ${MIN_SHIFT_HOURS_CASUAL}h to comply with Fair Work`,
                       suggestedChange: {
                         newEnd: addHoursToIso(s.start, MIN_SHIFT_HOURS_CASUAL),
                       },
@@ -217,7 +217,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                         shiftIndex: originalIndex,
                         shiftHours,
                         maxAllowed: MAX_SHIFT_SPAN_HOURS,
-                        message: `Turno de ${shiftHours.toFixed(1)}h excede máximo ${MAX_SHIFT_SPAN_HOURS}h`,
+                        message: `Shift of ${shiftHours.toFixed(1)}h exceeds maximum ${MAX_SHIFT_SPAN_HOURS}h`,
                       },
                     });
                     // Suggestion: Shorten shift to 12h
@@ -225,7 +225,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                       type: 'SHORTEN_SHIFT',
                       employeeId,
                       shiftIndex: originalIndex,
-                      reason: `Acortar turno a máximo ${MAX_SHIFT_SPAN_HOURS}h para cumplir Fair Work`,
+                      reason: `Shorten shift to maximum ${MAX_SHIFT_SPAN_HOURS}h to comply with Fair Work`,
                       suggestedChange: {
                         newEnd: addHoursToIso(s.start, MAX_SHIFT_SPAN_HOURS),
                       },
@@ -266,7 +266,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                           type: 'REASSIGN_SHIFT',
                           employeeId,
                           shiftIndex: originalIndex,
-                          reason: `Considerar reasignar turno de feriado (${holidayInfo?.name ?? 'fin de semana'}) a otro empleado o día para reducir costos`,
+                          reason: `Consider reassigning holiday shift (${holidayInfo?.name ?? 'weekend'}) to another employee or day to reduce costs`,
                           relatedIssue: 'HIGH_PENALTY_MULTIPLIER',
                         });
                       }
@@ -303,7 +303,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                       type: 'MOVE_SHIFT',
                       employeeId,
                       shiftIndex: idx2,
-                      reason: `Mover turno ${requiredGap.toFixed(1)}h más tarde para cumplir descanso mínimo de ${contractMinRest}h`,
+                      reason: `Move shift ${requiredGap.toFixed(1)}h later to meet minimum ${contractMinRest}h rest`,
                       suggestedChange: {
                         newStart: addHoursToIso(s2.start, requiredGap),
                         newEnd: addHoursToIso(s2.end, requiredGap),
@@ -327,7 +327,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                         workedHours: worked,
                         maxAllowed: contract.maxHoursWeek,
                         excessHours: worked - contract.maxHoursWeek,
-                        message: `Empleado excede horas semanales (${worked.toFixed(1)}h > ${contract.maxHoursWeek}h)`,
+                        message: `Employee exceeds weekly hours (${worked.toFixed(1)}h > ${contract.maxHoursWeek}h)`,
                       },
                     });
                     // Suggestion: Remove or reassign shifts
@@ -335,7 +335,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                     suggestions.push({
                       type: 'REMOVE_SHIFT',
                       employeeId: contract.employeeId,
-                      reason: `Remover o reasignar ${excessHours.toFixed(1)}h de turnos para cumplir máximo semanal de ${contract.maxHoursWeek}h`,
+                      reason: `Remove or reassign ${excessHours.toFixed(1)}h of shifts to meet ${contract.maxHoursWeek}h weekly maximum`,
                       relatedIssue: 'MAX_WEEKLY_HOURS_VIOLATION',
                     });
                   }
@@ -371,14 +371,14 @@ CLASIFICACIÓN DE SEVERIDADES:
                             streakStart,
                             streakEnd: workingDates[i],
                             maxAllowed: MAX_CONSECUTIVE_DAYS,
-                            message: `Empleado trabaja ${consecutiveDays} días consecutivos (máx ${MAX_CONSECUTIVE_DAYS})`,
+                            message: `Employee works ${consecutiveDays} consecutive days (max ${MAX_CONSECUTIVE_DAYS})`,
                           },
                         });
                         // Suggestion: Add rest day
                         suggestions.push({
                           type: 'ADD_REST_DAY',
                           employeeId,
-                          reason: `Añadir día de descanso entre ${streakStart} y ${workingDates[i]} para cumplir máximo ${MAX_CONSECUTIVE_DAYS} días consecutivos`,
+                          reason: `Add rest day between ${streakStart} and ${workingDates[i]} to meet maximum ${MAX_CONSECUTIVE_DAYS} consecutive days`,
                           relatedIssue: 'MAX_CONSECUTIVE_DAYS_VIOLATION',
                         });
                         break; // Only report once per employee
@@ -415,14 +415,14 @@ CLASIFICACIÓN DE SEVERIDADES:
                       minRequired: minHours,
                       employmentType,
                       shortfallHours: minHours - worked,
-                      message: `Empleado ${employmentType} con ${worked.toFixed(1)}h (mínimo ${minHours}h)`,
+                      message: `${employmentType} employee with ${worked.toFixed(1)}h (minimum ${minHours}h)`,
                     },
                   });
                   // Suggestion: Assign more shifts
                   suggestions.push({
                     type: 'ASSIGN_MORE_SHIFTS',
                     employeeId: contract.employeeId,
-                    reason: `Asignar ${(minHours - worked).toFixed(1)}h más para cumplir mínimo ${minHours}h/${employmentType}`,
+                    reason: `Assign ${(minHours - worked).toFixed(1)}h more to meet minimum ${minHours}h/${employmentType}`,
                     relatedIssue: 'MIN_WEEKLY_HOURS_VIOLATION',
                   });
                 }
@@ -466,7 +466,7 @@ CLASIFICACIÓN DE SEVERIDADES:
                       stationCode,
                       employeesAssigned: data.employeeIds.length,
                       specialistsCount: 0,
-                      message: `Estación ${stationCode} en ${date} sin especialista (${data.employeeIds.length} crew asignados)`,
+                      message: `Station ${stationCode} on ${date} without specialist (${data.employeeIds.length} crew assigned)`,
                     },
                   });
                 }

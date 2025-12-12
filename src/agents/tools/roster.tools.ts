@@ -20,7 +20,7 @@ import type { Shift } from '../../shared/types/shift';
 export const GenerateInitialRosterParams = z.object({
   storeId: z.string(),
   weekStart: z.string(), // ISO date YYYY-MM-DD
-  weekEnd: z.string().optional(), // Si no se proporciona, se asume weekStart + 6 días
+  weekEnd: z.string().optional(), // If not provided, assumes weekStart + 6 days
 });
 
 export type GenerateInitialRosterParamsType = z.infer<typeof GenerateInitialRosterParams>;
@@ -61,12 +61,12 @@ function createShiftFromAvailability(
 ): Shift | null {
   const shiftCode = availability.shiftCode;
   if (!shiftCode || !isAvailableShiftCode(shiftCode)) {
-    return null; // No disponible
+    return null; // Not available
   }
 
   const shiftTimes = SHIFT_CODE_TIMES[shiftCode];
   if (!shiftTimes) {
-    // Usar los tiempos de la disponibilidad si existen
+    // Use availability times if they exist
     if (availability.startTime && availability.endTime) {
       return {
         employeeId: availability.employeeId,
@@ -109,7 +109,7 @@ function matchEmployeeToStation(
     return true;
   }
 
-  // Match por nombre de estación en skills (case insensitive)
+  // Match by station name in skills (case insensitive)
   const normalizedStationCode = stationCode.toUpperCase().trim();
   const skillMatches = employeeSkills.skills.some((skill) => {
     const normalizedSkill = skill.toUpperCase().trim();
@@ -164,34 +164,34 @@ function isPeakPeriod(date: string, shiftCode: string | null | undefined): boole
 // --- Tool Implementations ---
 
 /**
- * Obtiene todo el contexto necesario para generar un roster
- * Consulta employee.tools y store.tools para obtener datos reales de la DB
+ * Gets all context needed to generate a roster
+ * Queries employee.tools and store.tools to get real data from DB
  */
 export async function getRosterContext(params: GetRosterContextParamsType): Promise<RosterContext> {
   const { storeId, weekStart, weekEnd } = params;
 
-  // 1. Obtener requerimientos de staff
+  // 1. Get staff requirements
   const staffRequirements = await storeTools.getStoreStaffRequirements.execute({ storeId });
 
-  // 2. Obtener disponibilidad de empleados
-  // Primero necesitamos saber qué empleados consultar
-  // Por ahora, usamos un approach que obtiene toda la disponibilidad para el store
+  // 2. Get employee availability
+  // First we need to know which employees to query
+  // For now, we use an approach that gets all availability for the store
   const availability = await employeeTools.getEmployeeAvailability.execute({
     storeId,
     startDate: weekStart,
     endDate: weekEnd,
-    employeeIds: [], // Vacío significará "todos" si el tool lo soporta
+    employeeIds: [], // Empty means "all" if the tool supports it
   });
 
-  // Extraer IDs únicos de empleados de la disponibilidad
+  // Extract unique employee IDs from availability
   const employeeIds = [...new Set(availability.map((a) => a.employeeId))];
 
-  // 3. Obtener skills de empleados
+  // 3. Get employee skills
   const employeeSkills = employeeIds.length > 0
     ? await employeeTools.getEmployeeSkills.execute({ employeeIds })
     : [];
 
-  // 4. Obtener contratos
+  // 4. Get contracts
   const contracts = employeeIds.length > 0
     ? await employeeTools.getEmployeeContracts.execute({ storeId, employeeIds })
     : [];
@@ -213,22 +213,22 @@ export async function getRosterContext(params: GetRosterContextParamsType): Prom
 }
 
 /**
- * Genera un roster inicial basado en:
- * - Disponibilidad declarada de empleados
- * - Skills/estaciones de cada empleado
- * - Requerimientos de staff por estación
+ * Generates an initial roster based on:
+ * - Declared employee availability
+ * - Skills/stations for each employee
+ * - Staff requirements by station
  */
 export async function generateInitialRoster(params: GenerateInitialRosterParamsType) {
   const { storeId, weekStart, weekEnd: providedWeekEnd } = params;
   const weekEnd = providedWeekEnd || addDays(weekStart, 6);
 
-  // Obtener contexto completo
+  // Get complete context
   let context: RosterContext;
   try {
     context = await getRosterContext({ storeId, weekStart, weekEnd });
   } catch (error) {
-    // Fallback si no hay conexión a DB - generar roster vacío con warning
-    console.warn('No se pudo obtener contexto de DB, generando roster vacío:', error);
+    // Fallback if no DB connection - generate empty roster with warning
+    console.warn('Could not get context from DB, generating empty roster:', error);
     return {
       storeId,
       weekStart,
@@ -237,7 +237,7 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
       metrics: {
         totalShifts: 0,
         employeesAssigned: 0,
-        warnings: ['No se pudo conectar a la base de datos para obtener disponibilidad'],
+        warnings: ['Could not connect to database to get availability'],
       },
     };
   }
@@ -283,14 +283,14 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
   const hasSpecialistByDateStation: Map<string, boolean> = new Map(); // "date:stationCode" -> hasSpecialist
 
 
-  // Agrupar disponibilidad por fecha y empleado
+  // Group availability by date and employee
   const availabilityByDateEmployee: Map<string, EmployeeAvailability> = new Map();
   for (const avail of availability) {
     const key = `${avail.date}:${avail.employeeId}`;
     availabilityByDateEmployee.set(key, avail);
   }
 
-  // Obtener todas las fechas en el rango
+  // Get all dates in the range
   const dates: string[] = [];
   let currentDate = weekStart;
   while (currentDate <= weekEnd) {
@@ -302,7 +302,7 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
   const availDates = [...new Set(availability.map(a => a.date))];
   const matchingDates = dates.filter(d => availDates.includes(d));
 
-  // Asignar empleados a estaciones por fecha
+  // Assign employees to stations by date
   for (const date of dates) {
     // Determine if this date is a weekend (always peak)
     const dayOfWeek = new Date(date).getDay();
@@ -328,7 +328,7 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
 
       if (neededStaff <= 0) continue;
 
-      // Buscar empleados disponibles que matcheen con esta estación
+      // Find available employees that match this station
       const reqStationCode = ((requirement as any).stationCode || '').toUpperCase();
       
       const availableEmployees = availability.filter((avail) => {
@@ -343,7 +343,7 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
         const shiftHours = getShiftHours(avail.shiftCode);
         if (currentHours + shiftHours > maxHours) return false;
 
-        // Verificar match de skills
+        // Verify skill match
         const hasSkillMatch = matchEmployeeToStation(
           avail.employeeId,
           employeeSkills,
@@ -351,7 +351,7 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
           (requirement as any).stationCode,
         );
 
-        // También aceptar si la disponibilidad tiene la misma estación
+        // Also accept if availability has the same station
         const hasStationMatch = avail.stationId === requirement.stationId;
 
         return hasSkillMatch || hasStationMatch;
@@ -400,7 +400,7 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
         return countA - countB;
       });
 
-      // Asignar hasta cubrir el requirement
+      // Assign until requirement is covered
       let assignedSpecialistThisStation = hasSpecialistByDateStation.get(specialistKey) || false;
       
       for (const avail of employeesToUse) {
@@ -437,19 +437,19 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
     }
   }
 
-  // Calcular métricas
+  // Calculate metrics
   const totalShifts = roster.length;
   const employeesAssigned = assignedByEmployee.size;
   const warnings: string[] = [];
 
-  // Verificar cobertura
+  // Verify coverage
   for (const date of dates) {
     for (const req of staffRequirements.filter((r) => r.periodType === 'NORMAL')) {
       const stationKey = `${date}:${req.stationId}`;
       const assigned = assignedByDateStation.get(stationKey)?.size || 0;
       if (assigned < req.requiredStaff) {
         warnings.push(
-          `Cobertura insuficiente para ${(req as any).stationCode || req.stationId} el ${date}: ${assigned}/${req.requiredStaff}`,
+          `Insufficient coverage for ${(req as any).stationCode || req.stationId} on ${date}: ${assigned}/${req.requiredStaff}`,
         );
       }
     }
@@ -479,7 +479,7 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
 }
 
 /**
- * Valida que un roster cumpla con los requerimientos de staff
+ * Validates that a roster meets staff requirements
  */
 export async function validateCoverage(
   params: ValidateCoverageParamsType,
@@ -491,14 +491,14 @@ export async function validateCoverage(
   const uncoveredSlots: CoverageMetrics['uncoveredSlots'] = [];
   const warnings: string[] = [];
 
-  // Contar shifts por estación
+  // Count shifts by station
   for (const shift of shifts) {
     const stationKey = shift.stationId || shift.station || 'unknown';
     coveredStations[stationKey] = (coveredStations[stationKey] || 0) + 1;
   }
 
-  // Para cada requirement, verificar cobertura por día
-  // Obtenemos las fechas del roster o usamos una semana por defecto
+  // For each requirement, verify coverage by day
+  // Get dates from roster or use a default week
   const weekStart = roster.weekStart;
   const rosterDays: string[] = [];
   if (weekStart) {
@@ -514,9 +514,9 @@ export async function validateCoverage(
   for (const req of staffRequirements) {
     const assigned = coveredStations[req.stationId] || 0;
     
-    // Si tenemos fechas específicas, crear gaps por día
+    // If we have specific dates, create gaps by day
     if (rosterDays.length > 0) {
-      // Verificar cobertura por día
+      // Verify coverage by day
       const shiftsPerDay = Math.floor(assigned / 7);
       for (const day of rosterDays) {
         if (shiftsPerDay < req.requiredStaff) {
@@ -531,7 +531,7 @@ export async function validateCoverage(
         }
       }
     } else {
-      // Fallback: usar fecha actual si no hay weekStart
+      // Fallback: use current date if no weekStart
       const today = new Date().toISOString().split('T')[0];
       const averagePerDay = Math.floor(assigned / 7);
       if (averagePerDay < req.requiredStaff) {
@@ -544,13 +544,13 @@ export async function validateCoverage(
           gap: req.requiredStaff - averagePerDay,
         });
         warnings.push(
-          `Cobertura insuficiente para ${req.stationId} (${req.periodType}): ~${averagePerDay}/${req.requiredStaff}`,
+          `Insufficient coverage for ${req.stationId} (${req.periodType}): ~${averagePerDay}/${req.requiredStaff}`,
         );
       }
     }
   }
 
-  // Calcular score de cobertura
+  // Calculate coverage score
   const totalRequired = staffRequirements.reduce((sum, r) => sum + r.requiredStaff, 0);
   const totalAssigned = Object.values(coveredStations).reduce((sum, count) => sum + count, 0);
   const coverageScore = totalRequired > 0 ? Math.min(100, (totalAssigned / (totalRequired * 7)) * 100) : 100;

@@ -19,25 +19,25 @@ export class StoreStationsService {
   ) {}
 
   async create(createStoreStationDto: CreateStoreStationDto): Promise<StoreStation> {
-    // Verificar que la tienda existe
+    // Verify store exists
     const store = await this.storeRepository.findOne({
       where: { id: createStoreStationDto.storeId, isActive: true },
     });
 
     if (!store) {
-      throw new NotFoundException(`Tienda con ID "${createStoreStationDto.storeId}" no encontrada`);
+      throw new NotFoundException(`Store with ID "${createStoreStationDto.storeId}" not found`);
     }
 
-    // Verificar que la estación existe
+    // Verify station exists
     const station = await this.stationRepository.findOne({
       where: { id: createStoreStationDto.stationId, isActive: true },
     });
 
     if (!station) {
-      throw new NotFoundException(`Estación con ID "${createStoreStationDto.stationId}" no encontrada`);
+      throw new NotFoundException(`Station with ID "${createStoreStationDto.stationId}" not found`);
     }
 
-    // Verificar si la relación ya existe
+    // Check if relationship already exists
     const existingRelation = await this.storeStationRepository.findOne({
       where: {
         store: { id: createStoreStationDto.storeId },
@@ -46,7 +46,7 @@ export class StoreStationsService {
     });
 
     if (existingRelation) {
-      throw new ConflictException('La relación entre esta tienda y estación ya existe');
+      throw new ConflictException('The relationship between this store and station already exists');
     }
 
     const storeStation = this.storeStationRepository.create({
@@ -72,7 +72,7 @@ export class StoreStationsService {
     });
 
     if (!storeStation) {
-      throw new NotFoundException(`Relación Store-Station con ID "${id}" no encontrada`);
+      throw new NotFoundException(`Store-Station relationship with ID "${id}" not found`);
     }
 
     return storeStation;
@@ -81,29 +81,29 @@ export class StoreStationsService {
   async update(id: string, updateStoreStationDto: UpdateStoreStationDto): Promise<StoreStation> {
     const storeStation = await this.findOne(id);
 
-    // Si se está actualizando la tienda, verificar que existe
+    // If updating store, verify it exists
     if (updateStoreStationDto.storeId) {
       const store = await this.storeRepository.findOne({
         where: { id: updateStoreStationDto.storeId, isActive: true },
       });
 
       if (!store) {
-        throw new NotFoundException(`Tienda con ID "${updateStoreStationDto.storeId}" no encontrada`);
+        throw new NotFoundException(`Store with ID "${updateStoreStationDto.storeId}" not found`);
       }
     }
 
-    // Si se está actualizando la estación, verificar que existe
+    // If updating station, verify it exists
     if (updateStoreStationDto.stationId) {
       const station = await this.stationRepository.findOne({
         where: { id: updateStoreStationDto.stationId, isActive: true },
       });
 
       if (!station) {
-        throw new NotFoundException(`Estación con ID "${updateStoreStationDto.stationId}" no encontrada`);
+        throw new NotFoundException(`Station with ID "${updateStoreStationDto.stationId}" not found`);
       }
     }
 
-    // Si se están actualizando ambos, verificar que la nueva relación no exista
+    // If updating both, verify the new relationship doesn't exist
     if (updateStoreStationDto.storeId && updateStoreStationDto.stationId) {
       const existingRelation = await this.storeStationRepository.findOne({
         where: {
@@ -113,7 +113,7 @@ export class StoreStationsService {
       });
 
       if (existingRelation && existingRelation.id !== id) {
-        throw new ConflictException('La relación entre esta tienda y estación ya existe');
+        throw new ConflictException('The relationship between this store and station already exists');
       }
     }
 

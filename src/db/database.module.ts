@@ -13,7 +13,7 @@ import typeOrmConfig from 'src/config/typeorm';
       inject: [ConfigService],
       useFactory: (configService: ConfigService): TypeOrmModuleOptions => {
         const config = configService.get<TypeOrmModuleOptions>('typeorm');
-        if (!config) throw new InternalServerErrorException('La configuración "typeorm" no fue encontrada.');
+        if (!config) throw new InternalServerErrorException('The "typeorm" configuration was not found.');
         return config;
       },
     }),
