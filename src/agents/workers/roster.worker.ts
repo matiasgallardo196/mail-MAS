@@ -1,22 +1,18 @@
 import type { WorkerOptions } from '../../shared/types/agent';
 import type { ToolDef } from '../../shared/types/tool';
 
-const WorkerBase = (() => {
-  try {
-    return require('@openai/agents').Worker;
-  } catch (err) {
-    return class {
-      name?: string;
-      instructions?: string;
-      tools?: ToolDef[];
-      constructor(opts: WorkerOptions = { name: 'fallback' } as WorkerOptions) {
-        this.name = opts.name;
-        this.instructions = opts.instructions;
-        this.tools = opts.tools as ToolDef[];
-      }
-    };
+// WorkerBase fallback - @openai/agents SDK doesn't export a Worker class
+// We use a local implementation that mimics the expected interface
+const WorkerBase = class {
+  name?: string;
+  instructions?: string;
+  tools?: ToolDef[];
+  constructor(opts: WorkerOptions = { name: 'fallback' } as WorkerOptions) {
+    this.name = opts.name;
+    this.instructions = opts.instructions;
+    this.tools = opts.tools as ToolDef[];
   }
-})();
+};
 
 import { z } from 'zod';
 import {

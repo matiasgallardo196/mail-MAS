@@ -1,0 +1,33 @@
+# Store Configurations - Table 1
+
+| McDonald's Store Configuration Examples - Different Locations   | Unnamed: 1                             | Unnamed: 2                    |
+|:----------------------------------------------------------------|:---------------------------------------|:------------------------------|
+| nan                                                             | nan                                    | nan                           |
+| Configuration Item                                              | Store 1: CBD Core Area                 | Store 2: Suburban Residential |
+| STORE STRUCTURE                                                 | nan                                    | nan                           |
+| Store Structure                                                 | ✓                                      | ✓                             |
+| Kitchen                                                         | ✓                                      | ✓                             |
+| Counter                                                         | ✓                                      | ✓                             |
+| Multiple McCafé                                                 | ✓                                      | nan                           |
+| Dessert Station                                                 | ✓                                      | nan                           |
+| Offline Dessert Station                                         | nan                                    | nan                           |
+| nan                                                             | nan                                    | nan                           |
+| STORE ATTRIBUTES                                                | nan                                    | nan                           |
+| Revenue Level                                                   | High                                   | Medium                        |
+| Store Type                                                      | Non-24H                                | Non-24H                       |
+| nan                                                             | nan                                    | nan                           |
+| OPERATING HOURS                                                 | nan                                    | nan                           |
+| Opening Time                                                    | 06:30                                  | 07:00                         |
+| Closing Time                                                    | 23:00                                  | 22:00                         |
+| Daily Operating Hours                                           | 16.5 hours                             | 15 hours                      |
+| nan                                                             | nan                                    | nan                           |
+| STORE CHARACTERISTICS                                           | nan                                    | nan                           |
+| Location Type                                                   | CBD Business District                  | Residential Suburb            |
+| Primary Customers                                               | Office workers, Business professionals | Local residents, Families     |
+| Peak Hours                                                      | 7-9 AM, 12-2 PM                        | Dinner time, Weekends         |
+| Coffee Demand                                                   | Very High                              | Medium                        |
+| Dessert Demand                                                  | High (Dedicated station)               | Low (No dedicated station)    |
+| Traffic Pattern                                                 | Weekday peaks                          | Evening & weekend peaks       |
+| Average Daily Customers                                         | 1200-1800 people                       | 600-900 people                |
+
+

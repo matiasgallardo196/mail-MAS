@@ -9,6 +9,7 @@ import { SchedulePeriodsService } from './schedule-periods.service';
 import { SchedulePeriodsController } from './schedule-periods.controller';
 import { ShiftAssignmentsService } from './shift-assignments.service';
 import { ShiftAssignmentsController } from './shift-assignments.controller';
+import { RosterController } from './roster.controller';
 import { ShiftCode } from './entities/shift-code.entity';
 import { SchedulePeriod } from './entities/schedule-period.entity';
 import { ShiftAssignment } from './entities/shift-assignment.entity';
@@ -36,7 +37,7 @@ const logger = new Logger('SchedulingModule');
       EmploymentTypeHoursPolicy,
     ]),
   ],
-  controllers: [ShiftCodesController, SchedulePeriodsController, ShiftAssignmentsController],
+  controllers: [ShiftCodesController, SchedulePeriodsController, ShiftAssignmentsController, RosterController],
   providers: [
     SchedulingOrchestrator,
     ShiftCodesService,

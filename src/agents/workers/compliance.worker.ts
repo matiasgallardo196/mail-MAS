@@ -12,22 +12,18 @@ import type { ComplianceResult, ComplianceIssue, ComplianceSuggestion } from '..
 import type { Roster } from '../../shared/types/roster';
 import type { Shift } from '../../shared/types/shift';
 
-const WorkerBase = (() => {
-  try {
-    return require('@openai/agents').Worker;
-  } catch (err) {
-    return class {
-      name?: string;
-      instructions?: string;
-      tools?: ToolDef[];
-      constructor(opts: any = {}) {
-        this.name = opts.name;
-        this.instructions = opts.instructions;
-        this.tools = opts.tools as ToolDef[];
-      }
-    };
+// WorkerBase fallback - @openai/agents SDK doesn't export a Worker class
+// We use a local implementation that mimics the expected interface
+const WorkerBase = class {
+  name?: string;
+  instructions?: string;
+  tools?: ToolDef[];
+  constructor(opts: { name?: string; instructions?: string; tools?: unknown[] } = {}) {
+    this.name = opts.name;
+    this.instructions = opts.instructions;
+    this.tools = opts.tools as ToolDef[];
   }
-})();
+};
 
 // Fair Work minimum shift hours for casual employees
 const MIN_SHIFT_HOURS_CASUAL = 3;

@@ -26,23 +26,18 @@ import {
   getDateString,
 } from '../../shared/utils/time.utils';
 
-// Fallback Worker base class
-const WorkerBase = (() => {
-  try {
-    return require('@openai/agents').Worker;
-  } catch {
-    return class {
-      name?: string;
-      instructions?: string;
-      tools?: ToolDef[];
-      constructor(opts: WorkerOptions = { name: 'fallback' }) {
-        this.name = opts.name;
-        this.instructions = opts.instructions;
-        this.tools = opts.tools as ToolDef[];
-      }
-    };
+// WorkerBase fallback - @openai/agents SDK doesn't export a Worker class
+// We use a local implementation that mimics the expected interface
+const WorkerBase = class {
+  name?: string;
+  instructions?: string;
+  tools?: ToolDef[];
+  constructor(opts: WorkerOptions = { name: 'fallback' }) {
+    this.name = opts.name;
+    this.instructions = opts.instructions;
+    this.tools = opts.tools as ToolDef[];
   }
-})();
+};
 
 // --- Types for agent collaboration ---
 

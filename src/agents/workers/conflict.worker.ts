@@ -10,23 +10,19 @@ import { hoursBetween, addHoursToIso } from '../../shared/utils/time.utils';
 import { SHIFT_CODE_TIMES, isAvailableShiftCode } from '../../shared/constants/shift-codes';
 import type { EmployeeAvailability, EmployeeSkill } from '../../shared/types/employee';
 
-// Fallback Worker base class
-const WorkerBase = (() => {
-  try {
-    return require('@openai/agents').Worker;
-  } catch {
-    return class {
-      name?: string;
-      instructions?: string;
-      tools?: ToolDef[];
-      constructor(opts: WorkerOptions = { name: 'fallback' }) {
-        this.name = opts.name;
-        this.instructions = opts.instructions;
-        this.tools = opts.tools as ToolDef[];
-      }
-    };
+// WorkerBase fallback - @openai/agents SDK doesn't export a Worker class
+// We use a local implementation that mimics the expected interface
+const WorkerBase = class {
+  name?: string;
+  instructions?: string;
+  tools?: ToolDef[];
+  constructor(opts: WorkerOptions = { name: 'fallback' }) {
+    this.name = opts.name;
+    this.instructions = opts.instructions;
+    this.tools = opts.tools as ToolDef[];
   }
-})();
+};
+
 
 // --- Input/Output Schemas ---
 
@@ -323,7 +319,49 @@ export class ConflictWorker extends WorkerBase {
               let resolved = 0;
               let unresolved = 0;
 
-              // Set de empleados ya asignados por fecha
+              // === PREVENTIVE: Limit hours per employee per week by employment type ===
+              const MAX_HOURS_BY_TYPE: Record<string, number> = {
+                FULL_TIME: 38,
+                PART_TIME: 32,
+                CASUAL: 24,
+              };
+
+              // Helper to calculate shift hours from shift code
+              const getShiftHours = (shiftCode: string | null | undefined): number => {
+                switch (shiftCode) {
+                  case '1F': return 9;  // 06:30-15:30
+                  case '2F': return 9;  // 14:00-23:00
+                  case '3F': return 12; // 08:00-20:00
+                  case 'S': return 8.5; // 06:30-15:00 (manager)
+                  case 'SC': return 9;  // 11:00-20:00 (shift change)
+                  default: return 9;    // Default to 9h
+                }
+              };
+
+              // Calculate hours worked per employee across the entire week
+              const hoursPerEmployee: Map<string, number> = new Map();
+              for (const shift of workingRoster.roster) {
+                const hours = getShiftHours(shift.shiftCode);
+                const current = hoursPerEmployee.get(shift.employeeId) || 0;
+                hoursPerEmployee.set(shift.employeeId, current + hours);
+              }
+
+              // Get employment types for all employees in the roster
+              const uniqueEmployeeIds = [...new Set(workingRoster.roster.map(s => s.employeeId))];
+              const contracts = uniqueEmployeeIds.length > 0
+                ? await employeeTools.getEmployeeContracts.execute({
+                    storeId: input.storeId,
+                    employeeIds: uniqueEmployeeIds,
+                  })
+                : [];
+              
+              // Map employeeId -> employmentType
+              const employeeTypes: Map<string, string> = new Map();
+              for (const contract of contracts) {
+                employeeTypes.set(contract.employeeId, contract.employmentType);
+              }
+
+              // Set de empleados ya asignados por fecha (to avoid same-day duplicates)
               const assignedByDate: Map<string, Set<string>> = new Map();
               for (const shift of workingRoster.roster) {
                 const date = shift.start.split('T')[0];
@@ -353,24 +391,52 @@ export class ConflictWorker extends WorkerBase {
                       ? await employeeTools.getEmployeeSkills.execute({ employeeIds })
                       : [];
 
+                  // Get contracts for available employees (to know their type)
+                  const availContracts = employeeIds.length > 0
+                    ? await employeeTools.getEmployeeContracts.execute({
+                        storeId: input.storeId,
+                        employeeIds,
+                      })
+                    : [];
+                  
+                  // Map available employees to their types
+                  for (const contract of availContracts) {
+                    if (!employeeTypes.has(contract.employeeId)) {
+                      employeeTypes.set(contract.employeeId, contract.employmentType);
+                    }
+                  }
+
                   // Filtrar empleados que:
                   // 1. Estén disponibles ese día
-                  // 2. No estén ya asignados
-                  // 3. Matcheen con la estación (si es posible)
+                  // 2. No estén ya asignados ese día
+                  // 3. No excedan el límite de HORAS semanales según su tipo de contrato
+                  // 4. Matcheen con la estación (si es posible)
                   const assigned = assignedByDate.get(gap.date) || new Set();
 
                   const candidatos = availability.filter((avail) => {
+                    // Check if already assigned today
                     if (assigned.has(avail.employeeId)) return false;
+                    
+                    // Check if exceeds weekly hours limit
+                    const empType = employeeTypes.get(avail.employeeId) || 'CASUAL';
+                    const maxHours = MAX_HOURS_BY_TYPE[empType] || 24;
+                    const currentHours = hoursPerEmployee.get(avail.employeeId) || 0;
+                    const shiftHours = getShiftHours(avail.shiftCode);
+                    
+                    if (currentHours + shiftHours > maxHours) return false;
+                    
                     if (!avail.shiftCode || avail.shiftCode === '/' || avail.shiftCode === 'NA')
                       return false;
 
-                    // Verificar skill match
+                    // Verificar skill match (with CREW/MANAGER fallback)
                     const empSkills = skills.find((s) => s.employeeId === avail.employeeId);
                     if (empSkills) {
                       const hasMatch = empSkills.skills.some(
                         (skill) =>
                           skill.toUpperCase() === gap.stationCode?.toUpperCase() ||
-                          skill.toUpperCase().includes(gap.stationCode?.toUpperCase() || ''),
+                          skill.toUpperCase().includes(gap.stationCode?.toUpperCase() || '') ||
+                          skill.toUpperCase() === 'CREW' ||
+                          skill.toUpperCase() === 'MANAGER',
                       );
                       if (hasMatch) return true;
                     }
@@ -393,6 +459,11 @@ export class ConflictWorker extends WorkerBase {
                     if (newShift) {
                       workingRoster.roster.push(newShift);
                       assigned.add(candidato.employeeId);
+                      
+                      // Update weekly hours tracking
+                      const currentHrs = hoursPerEmployee.get(candidato.employeeId) || 0;
+                      hoursPerEmployee.set(candidato.employeeId, currentHrs + getShiftHours(candidato.shiftCode));
+                      
                       gapRemaining--;
                       resolved++;
 
@@ -408,7 +479,7 @@ export class ConflictWorker extends WorkerBase {
                   if (gapRemaining > 0) {
                     unresolved += gapRemaining;
                     warnings.push(
-                      `Gap parcialmente resuelto para ${gap.stationCode || gap.stationId} el ${gap.date}: faltan ${gapRemaining} empleados`,
+                      `Gap parcialmente resuelto para ${gap.stationCode || gap.stationId} el ${gap.date}: faltan ${gapRemaining} empleados (límite semanal puede estar afectando)`,
                     );
                   }
                 } catch (error) {

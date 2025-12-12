@@ -16,6 +16,7 @@ const StoreHoursSchema = z.object({
 const StoreRequirementsSchema = z.array(
   z.object({
     stationId: z.string(),
+    stationCode: z.string().optional(),
     periodType: z.nativeEnum(PeriodType),
     requiredStaff: z.number(),
   }),
@@ -89,6 +90,7 @@ export const storeTools = {
       return StoreRequirementsSchema.parse(
         requirements.map((req) => ({
           stationId: req.station.id,
+          stationCode: req.station.code, // Added for skill matching
           periodType: req.periodType,
           requiredStaff: req.requiredStaff,
         })),

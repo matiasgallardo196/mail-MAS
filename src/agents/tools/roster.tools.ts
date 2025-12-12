@@ -99,16 +99,32 @@ function matchEmployeeToStation(
   stationCode?: string,
 ): boolean {
   const employeeSkills = skills.find((s) => s.employeeId === employeeId);
-  if (!employeeSkills) return false;
+  if (!employeeSkills) {
+    // No skills found - accept as fallback (CREW can work any station)
+    return true;
+  }
 
-  // Match por nombre de estación en skills
-  const skillMatches = employeeSkills.skills.some(
-    (skill) =>
-      skill.toUpperCase() === stationCode?.toUpperCase() ||
-      skill.toUpperCase().includes(stationCode?.toUpperCase() || ''),
+  // If no stationCode provided, accept any employee
+  if (!stationCode) {
+    return true;
+  }
+
+  // Match por nombre de estación en skills (case insensitive)
+  const normalizedStationCode = stationCode.toUpperCase().trim();
+  const skillMatches = employeeSkills.skills.some((skill) => {
+    const normalizedSkill = skill.toUpperCase().trim();
+    // Direct match or partial match
+    return normalizedSkill === normalizedStationCode || 
+           normalizedSkill.includes(normalizedStationCode) ||
+           normalizedStationCode.includes(normalizedSkill);
+  });
+
+  // Fallback: CREW or MANAGER roles can work any station
+  const hasRoleMatch = employeeSkills.skills.some(
+    (skill) => skill.toUpperCase() === 'CREW' || skill.toUpperCase() === 'MANAGER'
   );
 
-  return skillMatches;
+  return skillMatches || hasRoleMatch;
 }
 
 // --- Tool Implementations ---
@@ -153,6 +169,7 @@ export async function getRosterContext(params: GetRosterContextParamsType): Prom
     availability,
     staffRequirements: staffRequirements.map((req) => ({
       stationId: req.stationId,
+      stationCode: (req as any).stationCode as string | undefined,
       periodType: req.periodType,
       requiredStaff: req.requiredStaff,
     })),
@@ -191,10 +208,38 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
     };
   }
 
-  const { availability, staffRequirements, employeeSkills } = context;
+  const { availability, staffRequirements, employeeSkills, contracts } = context;
+  
+  // === PREVENTIVE: Max hours per week by employment type (Fair Work Act) ===
+  const MAX_HOURS_BY_TYPE: Record<string, number> = {
+    FULL_TIME: 38,
+    PART_TIME: 32,
+    CASUAL: 24,
+  };
+  
+  // Helper to get shift hours from shift code
+  const getShiftHours = (shiftCode: string | null | undefined): number => {
+    switch (shiftCode) {
+      case '1F': return 9;  // 06:30-15:30
+      case '2F': return 9;  // 14:00-23:00  
+      case '3F': return 12; // 08:00-20:00
+      case 'S': return 8.5; // 06:30-15:00 (manager)
+      case 'SC': return 9;  // 11:00-20:00 (shift change)
+      default: return 9;    // Default to 9h
+    }
+  };
+
+  // Map employeeId -> employmentType
+  const employeeTypes: Map<string, string> = new Map();
+  for (const contract of contracts || []) {
+    employeeTypes.set(contract.employeeId, contract.employmentType);
+  }
+
   const roster: Shift[] = [];
   const assignedByDateStation: Map<string, Set<string>> = new Map(); // "date:stationId" -> Set<employeeId>
   const assignedByEmployee: Map<string, number> = new Map(); // employeeId -> count of shifts
+  const hoursPerEmployee: Map<string, number> = new Map(); // employeeId -> weekly hours
+
 
   // Agrupar disponibilidad por fecha y empleado
   const availabilityByDateEmployee: Map<string, EmployeeAvailability> = new Map();
@@ -210,6 +255,10 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
     dates.push(currentDate);
     currentDate = addDays(currentDate, 1);
   }
+  
+  // Calculate matching dates for internal use (kept for debug field in response)
+  const availDates = [...new Set(availability.map(a => a.date))];
+  const matchingDates = dates.filter(d => availDates.includes(d));
 
   // Asignar empleados a estaciones por fecha
   for (const date of dates) {
@@ -232,6 +281,13 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
         if (avail.date !== date) return false;
         if (assigned.has(avail.employeeId)) return false;
         if (!avail.shiftCode || avail.shiftCode === '/' || avail.shiftCode === 'NA') return false;
+        
+        // === PREVENTIVE: Check weekly hours limit ===
+        const empType = employeeTypes.get(avail.employeeId) || 'CASUAL';
+        const maxHours = MAX_HOURS_BY_TYPE[empType] || 24;
+        const currentHours = hoursPerEmployee.get(avail.employeeId) || 0;
+        const shiftHours = getShiftHours(avail.shiftCode);
+        if (currentHours + shiftHours > maxHours) return false;
 
         // Verificar match de skills
         const hasSkillMatch = matchEmployeeToStation(
@@ -271,6 +327,9 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
             avail.employeeId,
             (assignedByEmployee.get(avail.employeeId) || 0) + 1,
           );
+          // Update weekly hours tracking
+          const hrs = hoursPerEmployee.get(avail.employeeId) || 0;
+          hoursPerEmployee.set(avail.employeeId, hrs + getShiftHours(avail.shiftCode));
         }
       }
     }
@@ -306,6 +365,14 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
       avgShiftsPerEmployee: employeesAssigned > 0 ? totalShifts / employeesAssigned : 0,
       warnings,
     },
+    debug: {
+      availabilityCount: availability.length,
+      skillsCount: employeeSkills.length,
+      requirementsCount: staffRequirements.length,
+      generatedDates: dates.slice(0, 3),
+      availabilityDates: [...new Set(availability.map(a => a.date))].slice(0, 3),
+      matchingDatesCount: matchingDates.length,
+    },
   };
 }
 
@@ -328,25 +395,56 @@ export async function validateCoverage(
     coveredStations[stationKey] = (coveredStations[stationKey] || 0) + 1;
   }
 
-  // Para cada requirement, verificar cobertura
-  // Nota: Esto es simplificado - en producción debería verificar por día y hora
+  // Para cada requirement, verificar cobertura por día
+  // Obtenemos las fechas del roster o usamos una semana por defecto
+  const weekStart = roster.weekStart;
+  const rosterDays: string[] = [];
+  if (weekStart) {
+    let currentDate = weekStart;
+    for (let i = 0; i < 7; i++) {
+      rosterDays.push(currentDate);
+      const d = new Date(currentDate);
+      d.setDate(d.getDate() + 1);
+      currentDate = d.toISOString().split('T')[0];
+    }
+  }
+  
   for (const req of staffRequirements) {
     const assigned = coveredStations[req.stationId] || 0;
-    // Asumiendo que estamos verificando para todos los días (simplificado)
-    const averagePerDay = assigned / 7; // Asumiendo semana completa
-
-    if (averagePerDay < req.requiredStaff) {
-      uncoveredSlots.push({
-        date: 'average',
-        stationId: req.stationId,
-        periodType: req.periodType,
-        required: req.requiredStaff,
-        assigned: Math.floor(averagePerDay),
-        gap: req.requiredStaff - Math.floor(averagePerDay),
-      });
-      warnings.push(
-        `Cobertura promedio insuficiente para ${req.stationId} (${req.periodType}): ~${Math.floor(averagePerDay)}/${req.requiredStaff}`,
-      );
+    
+    // Si tenemos fechas específicas, crear gaps por día
+    if (rosterDays.length > 0) {
+      // Verificar cobertura por día
+      const shiftsPerDay = Math.floor(assigned / 7);
+      for (const day of rosterDays) {
+        if (shiftsPerDay < req.requiredStaff) {
+          uncoveredSlots.push({
+            date: day,
+            stationId: req.stationId,
+            periodType: req.periodType,
+            required: req.requiredStaff,
+            assigned: shiftsPerDay,
+            gap: req.requiredStaff - shiftsPerDay,
+          });
+        }
+      }
+    } else {
+      // Fallback: usar fecha actual si no hay weekStart
+      const today = new Date().toISOString().split('T')[0];
+      const averagePerDay = Math.floor(assigned / 7);
+      if (averagePerDay < req.requiredStaff) {
+        uncoveredSlots.push({
+          date: today,
+          stationId: req.stationId,
+          periodType: req.periodType,
+          required: req.requiredStaff,
+          assigned: averagePerDay,
+          gap: req.requiredStaff - averagePerDay,
+        });
+        warnings.push(
+          `Cobertura insuficiente para ${req.stationId} (${req.periodType}): ~${averagePerDay}/${req.requiredStaff}`,
+        );
+      }
     }
   }
 

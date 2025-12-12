@@ -96,26 +96,44 @@ export const employeeTools = {
     }: z.infer<typeof GetAvailabilityInput>): Promise<Availability[]> => {
       const ds = await getDataSource();
       const availabilityRepo = ds.getRepository(EmployeeAvailability);
+      
+      // Build where clause - if employeeIds is empty, get all for the store
+      const whereClause: any = {
+        store: { id: storeId },
+        date: Between(new Date(startDate), new Date(endDate)),
+      };
+      
+      // Only add employee filter if we have specific IDs
+      if (employeeIds && employeeIds.length > 0) {
+        whereClause.employee = { id: In(employeeIds) };
+      }
+      
       const records = await availabilityRepo.find({
-        where: {
-          store: { id: storeId },
-          employee: { id: In(employeeIds) },
-          date: Between(new Date(startDate), new Date(endDate)),
-        },
+        where: whereClause,
         relations: ['shiftCode', 'station', 'employee', 'store'],
       });
 
-      return records.map((rec) =>
-        EmployeeAvailabilitySchema.parse({
+      return records.map((rec) => {
+        // Handle both Date object and string from DB
+        const rawDate = rec.date as Date | string;
+        let dateStr: string;
+        if (rawDate instanceof Date) {
+          dateStr = rawDate.toISOString().split('T')[0];
+        } else {
+          // If it's already a string (YYYY-MM-DD or with time), extract date part
+          dateStr = String(rawDate).split('T')[0];
+        }
+        
+        return EmployeeAvailabilitySchema.parse({
           employeeId: rec.employee.id,
           storeId: rec.store?.id,
-          date: rec.date.toISOString().split('T')[0],
+          date: dateStr,
           startTime: rec.shiftCode?.startTime ?? null,
           endTime: rec.shiftCode?.endTime ?? null,
           shiftCode: rec.shiftCode?.code ?? null,
           stationId: rec.station?.id ?? null,
-        }),
-      );
+        });
+      });
     },
   },
 

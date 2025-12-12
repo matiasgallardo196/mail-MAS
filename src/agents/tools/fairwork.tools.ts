@@ -44,10 +44,24 @@ export async function checkRestPeriod(params: CheckRestPeriodParamsType): Promis
 // --- Load Penalty Rules from DB ---
 export async function loadPenaltyRulesFromDb(storeId?: string): Promise<PenaltyRule[]> {
   try {
-    const rules = await PenaltyRuleEntity.find({
-      where: storeId ? [{ store: { id: storeId } }, { store: undefined }] : {},
-      order: { isPublicHoliday: 'DESC', multiplier: 'DESC' },
-    });
+    // Get global rules (store_id IS NULL) and store-specific rules if storeId provided
+    const queryBuilder = PenaltyRuleEntity.createQueryBuilder('rule')
+      .leftJoinAndSelect('rule.store', 'store')
+      .where('rule.is_active = :active', { active: true });
+
+    if (storeId) {
+      // Get rules for this store OR global rules (no store)
+      queryBuilder.andWhere('(store.id = :storeId OR rule.store_id IS NULL)', { storeId });
+    } else {
+      // Only global rules
+      queryBuilder.andWhere('rule.store_id IS NULL');
+    }
+
+    queryBuilder.orderBy('rule.isPublicHoliday', 'DESC')
+      .addOrderBy('rule.multiplier', 'DESC');
+
+    const rules = await queryBuilder.getMany();
+    
     return rules.map((r: any) => ({
       id: r.id,
       dayOfWeek: r.dayOfWeek,
@@ -59,6 +73,7 @@ export async function loadPenaltyRulesFromDb(storeId?: string): Promise<PenaltyR
       description: r.description,
     }));
   } catch (err) {
+    console.error('Error loading penalty rules:', err);
     // DB not available or entity not loaded; return empty (caller should handle CRITICAL)
     return [];
   }

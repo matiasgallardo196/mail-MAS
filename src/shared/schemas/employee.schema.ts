@@ -5,9 +5,10 @@ export const EmploymentTypeEnum = z.enum(['FULL_TIME', 'PART_TIME', 'CASUAL']);
 export const EmployeeContractSchema = z.object({
   employeeId: z.string(),
   employmentType: EmploymentTypeEnum,
-  maxHoursWeek: z.number().nullable().optional(),
-  minHoursBetweenShifts: z.number().nullable().optional(),
-  baseRate: z.number().nullable().optional(),
+  // Use coerce to handle DB returning numbers as strings
+  maxHoursWeek: z.coerce.number().nullable().optional(),
+  minHoursBetweenShifts: z.coerce.number().nullable().optional(),
+  baseRate: z.coerce.number().nullable().optional(),
 });
 
 export const EmployeeAvailabilitySchema = z.object({
