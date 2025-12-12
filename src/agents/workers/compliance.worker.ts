@@ -342,6 +342,136 @@ CLASIFICACIÓN DE SEVERIDADES:
                 }
               }
 
+              // 9. Validate max consecutive working days (6 days max per Fair Work)
+              const MAX_CONSECUTIVE_DAYS = 6;
+              for (const [employeeId, shiftEntries] of Object.entries(shiftsByEmployee)) {
+                // Get unique working dates for this employee
+                const workingDates = [...new Set(
+                  shiftEntries.map(se => se.shift.start.split('T')[0])
+                )].sort();
+
+                if (workingDates.length > 1) {
+                  let consecutiveDays = 1;
+                  let streakStart = workingDates[0];
+                  
+                  for (let i = 1; i < workingDates.length; i++) {
+                    const prevDate = new Date(workingDates[i - 1]);
+                    const currDate = new Date(workingDates[i]);
+                    const diffDays = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+                    
+                    if (diffDays === 1) {
+                      consecutiveDays++;
+                      if (consecutiveDays > MAX_CONSECUTIVE_DAYS) {
+                        issues.push({
+                          employeeId,
+                          issue: 'MAX_CONSECUTIVE_DAYS_VIOLATION',
+                          severity: 'CRITICAL',
+                          details: {
+                            consecutiveDays,
+                            streakStart,
+                            streakEnd: workingDates[i],
+                            maxAllowed: MAX_CONSECUTIVE_DAYS,
+                            message: `Empleado trabaja ${consecutiveDays} días consecutivos (máx ${MAX_CONSECUTIVE_DAYS})`,
+                          },
+                        });
+                        // Suggestion: Add rest day
+                        suggestions.push({
+                          type: 'ADD_REST_DAY',
+                          employeeId,
+                          reason: `Añadir día de descanso entre ${streakStart} y ${workingDates[i]} para cumplir máximo ${MAX_CONSECUTIVE_DAYS} días consecutivos`,
+                          relatedIssue: 'MAX_CONSECUTIVE_DAYS_VIOLATION',
+                        });
+                        break; // Only report once per employee
+                      }
+                    } else {
+                      // Reset streak
+                      consecutiveDays = 1;
+                      streakStart = workingDates[i];
+                    }
+                  }
+                }
+              }
+
+              // 10. Validate min weekly hours per Challenge Brief
+              // FT: 35-38h, PT: 20-32h, Casual: 8-24h
+              const MIN_HOURS_BY_TYPE: Record<string, number> = {
+                FULL_TIME: 35,
+                PART_TIME: 20,
+                CASUAL: 8,
+              };
+              
+              for (const contract of employeeContracts) {
+                const employmentType = contract.employmentType || 'CASUAL';
+                const minHours = MIN_HOURS_BY_TYPE[employmentType] || 0;
+                const worked = hoursByEmployee[contract.employeeId] ?? 0;
+                
+                if (worked > 0 && worked < minHours) {
+                  issues.push({
+                    employeeId: contract.employeeId,
+                    issue: 'MIN_WEEKLY_HOURS_VIOLATION',
+                    severity: 'MAJOR', // Not critical but worth noting
+                    details: {
+                      workedHours: worked,
+                      minRequired: minHours,
+                      employmentType,
+                      shortfallHours: minHours - worked,
+                      message: `Empleado ${employmentType} con ${worked.toFixed(1)}h (mínimo ${minHours}h)`,
+                    },
+                  });
+                  // Suggestion: Assign more shifts
+                  suggestions.push({
+                    type: 'ASSIGN_MORE_SHIFTS',
+                    employeeId: contract.employeeId,
+                    reason: `Asignar ${(minHours - worked).toFixed(1)}h más para cumplir mínimo ${minHours}h/${employmentType}`,
+                    relatedIssue: 'MIN_WEEKLY_HOURS_VIOLATION',
+                  });
+                }
+              }
+
+              // 11. Validate at least 1 specialist per station per shift 
+              // (Challenge Criterion 4: "Each station has at least 1 qualified person per shift")
+              // Group shifts by date and station
+              const shiftsByDateStation: Record<string, { stationCode: string; employeeIds: string[] }> = {};
+              for (const shift of (roster.roster ?? []) as any[]) {
+                const date = shift.start?.split('T')[0] || 'unknown';
+                const stationCode = shift.station?.toUpperCase() || shift.stationId || 'UNKNOWN';
+                const key = `${date}:${stationCode}`;
+                if (!shiftsByDateStation[key]) {
+                  shiftsByDateStation[key] = { stationCode, employeeIds: [] };
+                }
+                shiftsByDateStation[key].employeeIds.push(shift.employeeId);
+              }
+
+              // Build map of employeeId -> defaultStationCode
+              const employeeDefaultStation: Record<string, string | null> = {};
+              for (const contract of employeeContracts) {
+                employeeDefaultStation[contract.employeeId] = (contract as any).defaultStationCode || null;
+              }
+
+              // Check each date-station combo has at least 1 specialist
+              for (const [key, data] of Object.entries(shiftsByDateStation)) {
+                const [date, stationCode] = key.split(':');
+                const specialists = data.employeeIds.filter(empId => {
+                  const empStation = employeeDefaultStation[empId]?.toUpperCase();
+                  return empStation === stationCode.toUpperCase();
+                });
+
+                if (specialists.length === 0 && data.employeeIds.length > 0) {
+                  issues.push({
+                    employeeId: data.employeeIds[0], // Attach to first employee for reference
+                    issue: 'NO_SPECIALIST_FOR_STATION',
+                    severity: 'MAJOR',
+                    details: {
+                      date,
+                      stationCode,
+                      employeesAssigned: data.employeeIds.length,
+                      specialistsCount: 0,
+                      message: `Estación ${stationCode} en ${date} sin especialista (${data.employeeIds.length} crew asignados)`,
+                    },
+                  });
+                }
+              }
+
               const result: ComplianceResult = {
                 passed: !issues.some((i) => i.severity === 'CRITICAL'),
                 issues,

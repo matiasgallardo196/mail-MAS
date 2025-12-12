@@ -9,6 +9,7 @@ export const EmployeeContractSchema = z.object({
   maxHoursWeek: z.coerce.number().nullable().optional(),
   minHoursBetweenShifts: z.coerce.number().nullable().optional(),
   baseRate: z.coerce.number().nullable().optional(),
+  defaultStationCode: z.string().nullable().optional(), // For specialist validation
 });
 
 export const EmployeeAvailabilitySchema = z.object({

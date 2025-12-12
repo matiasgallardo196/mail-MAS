@@ -68,6 +68,7 @@ export const employeeTools = {
 
       const employees = await employeeRepo.find({
         where: { id: In(employeeIds) },
+        relations: ['defaultStation'], // Ensure defaultStation is loaded for specialist matching
       });
 
       return employees.map((emp) => {
@@ -78,6 +79,7 @@ export const employeeTools = {
           maxHoursWeek: hoursRule?.maxHoursWeek ?? null,
           minHoursBetweenShifts: policy?.minHoursBetweenShifts ?? null,
           baseRate: null,
+          defaultStationCode: (emp.defaultStation as any)?.code ?? null,
         });
       });
     },

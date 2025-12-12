@@ -127,6 +127,40 @@ function matchEmployeeToStation(
   return skillMatches || hasRoleMatch;
 }
 
+/**
+ * Determines if a date/shift combination falls in a peak period.
+ * Peak periods require more staff per station.
+ * 
+ * Peak conditions per Challenge Brief:
+ * - Weekends (Saturday + Sunday): Always peak (+20% staff)
+ * - Lunch Peak: 11:00-14:00 (1F, SC, 3F cover this)
+ * - Dinner Peak: 17:00-21:00 (2F, 3F cover this)
+ */
+function isPeakPeriod(date: string, shiftCode: string | null | undefined): boolean {
+  const dayOfWeek = new Date(date).getDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
+  
+  // Weekends are always peak (Challenge: "Weekend coverage is 20% higher")
+  if (isWeekend) return true;
+  
+  // 1F (06:30-15:30) covers lunch peak (11:00-14:00)
+  if (shiftCode === '1F') return true;
+  
+  // SC (11:00-20:00) covers both lunch and dinner peak
+  if (shiftCode === 'SC') return true;
+  
+  // 2F (14:00-23:00) covers dinner peak (17:00-21:00)
+  if (shiftCode === '2F') return true;
+  
+  // 3F (08:00-20:00) covers both lunch and dinner peak
+  if (shiftCode === '3F') return true;
+  
+  // S (06:30-15:00) covers lunch peak
+  if (shiftCode === 'S') return true;
+  
+  return false;
+}
+
 // --- Tool Implementations ---
 
 /**
@@ -235,10 +269,18 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
     employeeTypes.set(contract.employeeId, contract.employmentType);
   }
 
+  // Map employeeId -> defaultStationCode (for specialist prioritization)
+  const employeeDefaultStation: Map<string, string | null> = new Map();
+  for (const contract of contracts || []) {
+    employeeDefaultStation.set(contract.employeeId, (contract as any).defaultStationCode || null);
+  }
+
   const roster: Shift[] = [];
   const assignedByDateStation: Map<string, Set<string>> = new Map(); // "date:stationId" -> Set<employeeId>
   const assignedByEmployee: Map<string, number> = new Map(); // employeeId -> count of shifts
   const hoursPerEmployee: Map<string, number> = new Map(); // employeeId -> weekly hours
+  // Track if station already has a specialist for the day
+  const hasSpecialistByDateStation: Map<string, boolean> = new Map(); // "date:stationCode" -> hasSpecialist
 
 
   // Agrupar disponibilidad por fecha y empleado
@@ -262,10 +304,20 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
 
   // Asignar empleados a estaciones por fecha
   for (const date of dates) {
-    // Obtener los requirements para NORMAL (por defecto, sin forecast aún)
+    // Determine if this date is a weekend (always peak)
+    const dayOfWeek = new Date(date).getDay();
+    const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    // Get both NORMAL and PEAK requirements
     const normalRequirements = staffRequirements.filter((r) => r.periodType === 'NORMAL');
+    const peakRequirements = staffRequirements.filter((r) => r.periodType === 'PEAK');
+    
+    // Use PEAK requirements for weekends, NORMAL otherwise (shift-specific peak handled later)
+    const effectiveRequirements = isWeekendDay ? peakRequirements : normalRequirements;
+    // Fallback to NORMAL if no PEAK requirements exist
+    const requirementsToUse = effectiveRequirements.length > 0 ? effectiveRequirements : normalRequirements;
 
-    for (const requirement of normalRequirements) {
+    for (const requirement of requirementsToUse) {
       const stationKey = `${date}:${requirement.stationId}`;
       if (!assignedByDateStation.has(stationKey)) {
         assignedByDateStation.set(stationKey, new Set());
@@ -277,6 +329,8 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
       if (neededStaff <= 0) continue;
 
       // Buscar empleados disponibles que matcheen con esta estación
+      const reqStationCode = ((requirement as any).stationCode || '').toUpperCase();
+      
       const availableEmployees = availability.filter((avail) => {
         if (avail.date !== date) return false;
         if (assigned.has(avail.employeeId)) return false;
@@ -302,16 +356,54 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
 
         return hasSkillMatch || hasStationMatch;
       });
+      
+      // === SMART: Reserve specialists for their own stations ===
+      // Separate employees into: specialists for THIS station, non-specialists, and specialists from OTHER stations
+      const thisStationSpecialists = availableEmployees.filter(avail => 
+        employeeDefaultStation.get(avail.employeeId)?.toUpperCase() === reqStationCode
+      );
+      const nonSpecialists = availableEmployees.filter(avail => {
+        const empStation = employeeDefaultStation.get(avail.employeeId)?.toUpperCase();
+        return !empStation || empStation === reqStationCode; // No station = flexible
+      });
+      const otherSpecialists = availableEmployees.filter(avail => {
+        const empStation = employeeDefaultStation.get(avail.employeeId)?.toUpperCase();
+        return empStation && empStation !== reqStationCode;
+      });
+      
+      // Use this station's specialists + non-specialists first; only use other specialists if needed
+      const prioritizedEmployees = [...thisStationSpecialists, ...nonSpecialists];
+      const canFillWithoutOthers = prioritizedEmployees.length >= neededStaff;
+      const employeesToUse = canFillWithoutOthers 
+        ? prioritizedEmployees 
+        : [...prioritizedEmployees, ...otherSpecialists];
 
-      // Ordenar por cantidad de turnos ya asignados (balance)
-      availableEmployees.sort((a, b) => {
+      // Get station code for specialist matching
+      const stationCode = ((requirement as any).stationCode || '').toUpperCase();
+      const specialistKey = `${date}:${stationCode}`;
+      const needsSpecialist = !hasSpecialistByDateStation.get(specialistKey);
+
+      // Sort: prioritize specialists first, then by shift count (balance)
+      employeesToUse.sort((a, b) => {
+        const aIsSpecialist = employeeDefaultStation.get(a.employeeId)?.toUpperCase() === stationCode;
+        const bIsSpecialist = employeeDefaultStation.get(b.employeeId)?.toUpperCase() === stationCode;
+        
+        // If we need a specialist and one is available, prioritize them
+        if (needsSpecialist) {
+          if (aIsSpecialist && !bIsSpecialist) return -1;
+          if (!aIsSpecialist && bIsSpecialist) return 1;
+        }
+        
+        // Otherwise, balance by shift count
         const countA = assignedByEmployee.get(a.employeeId) || 0;
         const countB = assignedByEmployee.get(b.employeeId) || 0;
         return countA - countB;
       });
 
       // Asignar hasta cubrir el requirement
-      for (const avail of availableEmployees) {
+      let assignedSpecialistThisStation = hasSpecialistByDateStation.get(specialistKey) || false;
+      
+      for (const avail of employeesToUse) {
         if (assigned.size >= requirement.requiredStaff) break;
 
         const shift = createShiftFromAvailability(
@@ -321,6 +413,16 @@ export async function generateInitialRoster(params: GenerateInitialRosterParamsT
         );
 
         if (shift) {
+          // Set isPeak flag based on date and shift code
+          shift.isPeak = isWeekendDay || isPeakPeriod(date, avail.shiftCode);
+          
+          // Track if this employee is a specialist for this station
+          const isSpecialist = employeeDefaultStation.get(avail.employeeId)?.toUpperCase() === stationCode;
+          if (isSpecialist) {
+            assignedSpecialistThisStation = true;
+            hasSpecialistByDateStation.set(specialistKey, true);
+          }
+          
           roster.push(shift);
           assigned.add(avail.employeeId);
           assignedByEmployee.set(

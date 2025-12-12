@@ -8,7 +8,7 @@ export const ComplianceIssueSchema = z.object({
 });
 
 export const ComplianceSuggestionSchema = z.object({
-  type: z.enum(['MOVE_SHIFT', 'SHORTEN_SHIFT', 'EXTEND_SHIFT', 'REMOVE_SHIFT', 'ADD_REST_DAY', 'REASSIGN_SHIFT']),
+  type: z.enum(['MOVE_SHIFT', 'SHORTEN_SHIFT', 'EXTEND_SHIFT', 'REMOVE_SHIFT', 'ADD_REST_DAY', 'REASSIGN_SHIFT', 'ASSIGN_MORE_SHIFTS']),
   employeeId: z.string(),
   shiftIndex: z.number().optional(),
   reason: z.string(),
