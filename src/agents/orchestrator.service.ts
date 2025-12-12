@@ -356,6 +356,7 @@ export class SchedulingOrchestrator {
       });
       addTrace('EmployeeTools', 'Orchestrator', 'contracts_loaded', {
         count: contracts.length,
+        withDefaultStation: contracts.filter((c: any) => c.defaultStationCode).length,
       });
       return contracts;
     } catch (error) {

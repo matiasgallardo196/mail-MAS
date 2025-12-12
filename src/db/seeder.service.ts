@@ -251,12 +251,8 @@ export class SeederService {
     for (const employeeData of employeesSeed) {
       const existing = await employeeRepository.findOne({
         where: { externalCode: employeeData.externalCode },
+        relations: ['defaultStation'],
       });
-
-      if (existing) {
-        this.logger.log(`  ⊙ Empleado ya existe: ${employeeData.externalCode}`);
-        continue;
-      }
 
       const store = await storeRepository.findOne({
         where: { code: employeeData.defaultStoreCode },
@@ -270,6 +266,19 @@ export class SeederService {
 
       if (!store) {
         this.logger.warn(`  ⚠ No se encontró store: ${employeeData.defaultStoreCode}`);
+        continue;
+      }
+
+      if (existing) {
+        // Update existing employee's defaultStation if it changed or was null
+        const currentStationCode = existing.defaultStation?.code;
+        if (currentStationCode !== employeeData.defaultStationCode) {
+          existing.defaultStation = station || undefined;
+          await employeeRepository.save(existing);
+          this.logger.log(`  ↻ Empleado actualizado (station): ${employeeData.externalCode} → ${employeeData.defaultStationCode || 'null'}`);
+        } else {
+          this.logger.log(`  ⊙ Empleado ya existe: ${employeeData.externalCode}`);
+        }
         continue;
       }
 
